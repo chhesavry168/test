@@ -1,6 +1,6 @@
 --[[
-    NOVA Client GUI v6 — Fresh Redesign
-    Location: StarterPlayer > StarterPlayerScripts (LocalScript)
+    NOVA v7 — Clean Dark UI
+    LocalScript → StarterPlayer > StarterPlayerScripts
 --]]
 
 local Players          = game:GetService("Players")
@@ -16,73 +16,59 @@ local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 -- =====================================================
--- THEME
+-- THEME  (clean, flat, minimal borders)
 -- =====================================================
 local T = {
-    Base       = Color3.fromRGB(7, 7, 11),
-    Surface    = Color3.fromRGB(14, 14, 20),
-    Elevated   = Color3.fromRGB(20, 20, 29),
-    Border     = Color3.fromRGB(34, 34, 48),
-    Text       = Color3.fromRGB(250, 250, 255),
-    SubText    = Color3.fromRGB(130, 130, 155),
-    Muted      = Color3.fromRGB(75, 75, 95),
-    Violet     = Color3.fromRGB(140, 100, 255),
-    Cyan       = Color3.fromRGB(0, 225, 255),
-    Mint       = Color3.fromRGB(80, 245, 190),
-    Pink       = Color3.fromRGB(255, 105, 200),
-    Red        = Color3.fromRGB(255, 75, 110),
-    Off        = Color3.fromRGB(42, 42, 58),
+    Base      = Color3.fromRGB(12, 12, 15),      -- window background
+    Surface   = Color3.fromRGB(18, 18, 22),      -- cards
+    Surface2  = Color3.fromRGB(24, 24, 29),      -- hover
+    Divider   = Color3.fromRGB(30, 30, 36),      -- very subtle lines
+    Text      = Color3.fromRGB(240, 240, 245),
+    SubText   = Color3.fromRGB(130, 130, 140),
+    Muted     = Color3.fromRGB(80, 80, 90),
+    Accent    = Color3.fromRGB(130, 100, 255),   -- one accent only
+    AccentDim = Color3.fromRGB(90, 70, 180),
+    Off       = Color3.fromRGB(40, 40, 48),
+    Red       = Color3.fromRGB(230, 70, 90),
 }
 
 local FONT   = Enum.Font.Gotham
 local FONT_M = Enum.Font.GothamMedium
 local FONT_S = Enum.Font.GothamSemibold
 local FONT_B = Enum.Font.GothamBold
-local FONT_K = Enum.Font.GothamBlack
 
 -- =====================================================
 -- STATE
 -- =====================================================
 local State = {
-    FPSBoost    = false,
-    AntiLag     = false,
-    AntiAFK     = false,
-    FullBright  = false,
-    InfiniteJmp = false,
-    NoClip      = false,
-    WalkSpeed   = 16,
-    JumpPower   = 50,
+    FPSBoost=false, AntiLag=false, AntiAFK=false,
+    FullBright=false, InfiniteJmp=false, NoClip=false,
+    WalkSpeed=16, JumpPower=50,
 }
 
 -- =====================================================
 -- HELPERS
 -- =====================================================
-local function corner(p, r) local c = Instance.new("UICorner"); c.CornerRadius = r or UDim.new(0,12); c.Parent = p; return c end
-local function stroke(p, c, t, tr)
-    local s = Instance.new("UIStroke"); s.Color = c or T.Border; s.Thickness = t or 1
-    s.Transparency = tr or 0; s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; s.Parent = p; return s
+local function corner(p, r)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = r or UDim.new(0, 6)
+    c.Parent = p
+    return c
 end
-local function grad(p, cols, rot)
-    local g = Instance.new("UIGradient")
-    local k = {}; for i,c in ipairs(cols) do table.insert(k, ColorSequenceKeypoint.new((i-1)/(#cols-1), c)) end
-    g.Color = ColorSequence.new(k); g.Rotation = rot or 0; g.Parent = p; return g
+local function stroke(p, c, t, tr)
+    local s = Instance.new("UIStroke")
+    s.Color = c or T.Divider
+    s.Thickness = t or 1
+    s.Transparency = tr or 0.5
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    s.Parent = p
+    return s
 end
 local function pad(p,l,r,t,b)
     local u = Instance.new("UIPadding")
     u.PaddingLeft=UDim.new(0,l or 0); u.PaddingRight=UDim.new(0,r or 0)
-    u.PaddingTop=UDim.new(0,t or 0); u.PaddingBottom=UDim.new(0,b or 0); u.Parent=p; return u
-end
-local function shadow(p, size, trans)
-    local s = Instance.new("ImageLabel")
-    s.Size = UDim2.new(1, size, 1, size)
-    s.Position = UDim2.new(0, -size/2, 0, -size/2)
-    s.BackgroundTransparency = 1
-    s.Image = "rbxassetid://5028857472"
-    s.ImageColor3 = Color3.new(0,0,0)
-    s.ImageTransparency = trans or 0.4
-    s.ZIndex = 0
-    s.Parent = p
-    return s
+    u.PaddingTop=UDim.new(0,t or 0);  u.PaddingBottom=UDim.new(0,b or 0)
+    u.Parent=p
 end
 
 -- =====================================================
@@ -97,143 +83,71 @@ gui.DisplayOrder = 9999
 gui.Parent = playerGui
 
 -- =====================================================
--- FLOATING BUTTON (hexagonal + hover expand)
+-- FLOATING "NOVA" TEXT BUTTON (no circle, no pill)
 -- =====================================================
-local COLLAPSED = 52
-local EXPANDED  = 118
+local btnW, btnH = 92, 32
 
-local launcher = Instance.new("Frame")
+local launcher = Instance.new("TextButton")
 launcher.Name = "Launcher"
-launcher.Size = UDim2.fromOffset(COLLAPSED, COLLAPSED)
-launcher.Position = UDim2.new(0, 40, 0.5, -26)
-launcher.BackgroundColor3 = T.Surface
-launcher.BorderSizePixel = 0
-launcher.ClipsDescendants = true
+launcher.Size = UDim2.fromOffset(btnW, btnH)
+launcher.Position = UDim2.new(0, 30, 0.5, -16)
+launcher.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+launcher.AutoButtonColor = false
+launcher.Text = ""
 launcher.Parent = gui
-corner(launcher, UDim.new(1, 0))
+corner(launcher, UDim.new(0, 6))
 
--- inner dark gradient
+-- animated gradient underline (only accent, no full border)
+local underline = Instance.new("Frame")
+underline.Size = UDim2.new(1, -16, 0, 2)
+underline.Position = UDim2.new(0, 8, 1, -5)
+underline.BackgroundColor3 = T.Accent
+underline.BorderSizePixel = 0
+underline.Parent = launcher
+corner(underline, UDim.new(1, 0))
+
+local ulGrad = Instance.new("UIGradient")
+ulGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, T.Accent),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(90, 200, 255)),
+    ColorSequenceKeypoint.new(1, T.Accent),
+})
+ulGrad.Parent = underline
+
+local label = Instance.new("TextLabel")
+label.Size = UDim2.new(1, 0, 1, 0)
+label.BackgroundTransparency = 1
+label.Text = "NOVA"
+label.Font = FONT_B
+label.TextSize = 14
+label.TextColor3 = T.Text
+label.Parent = launcher
+
 local lgGrad = Instance.new("UIGradient")
 lgGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(26, 22, 44)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 12, 20)),
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255,255,255)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(200, 200, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255,255,255)),
 })
-lgGrad.Rotation = 135
-lgGrad.Parent = launcher
+lgGrad.Parent = label
 
--- animated conic border (rainbow)
-local lgStroke = Instance.new("UIStroke")
-lgStroke.Thickness = 2
-lgStroke.Color = Color3.new(1,1,1)
-lgStroke.Parent = launcher
-
-local conicGrad = Instance.new("UIGradient")
-conicGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0.00, T.Violet),
-    ColorSequenceKeypoint.new(0.25, T.Cyan),
-    ColorSequenceKeypoint.new(0.50, T.Mint),
-    ColorSequenceKeypoint.new(0.75, T.Pink),
-    ColorSequenceKeypoint.new(1.00, T.Violet),
-})
-conicGrad.Parent = lgStroke
-
--- pulsing halo
-local halo = Instance.new("Frame")
-halo.AnchorPoint = Vector2.new(0.5,0.5)
-halo.Position = UDim2.new(0.5,0,0.5,0)
-halo.Size = UDim2.new(1,0,1,0)
-halo.BackgroundTransparency = 1
-halo.ZIndex = 0
-halo.Parent = launcher
-corner(halo, UDim.new(1,0))
-local haloStroke = stroke(halo, T.Violet, 2, 0.4)
-
--- "N" mark
-local nMark = Instance.new("TextLabel")
-nMark.Size = UDim2.fromOffset(COLLAPSED, COLLAPSED)
-nMark.Position = UDim2.new(0, 0, 0, 0)
-nMark.BackgroundTransparency = 1
-nMark.Text = "N"
-nMark.Font = FONT_K
-nMark.TextSize = 22
-nMark.TextColor3 = Color3.new(1,1,1)
-nMark.ZIndex = 3
-nMark.Parent = launcher
-local nGrad = grad(nMark, {T.Violet, T.Cyan}, 45)
-
--- expanded wordmark (fades in on hover)
-local wordmark = Instance.new("TextLabel")
-wordmark.Size = UDim2.new(1, -COLLAPSED, 1, 0)
-wordmark.Position = UDim2.new(0, COLLAPSED - 4, 0, 0)
-wordmark.BackgroundTransparency = 1
-wordmark.Text = "NOVA"
-wordmark.Font = FONT_K
-wordmark.TextSize = 16
-wordmark.TextColor3 = Color3.new(1,1,1)
-wordmark.TextXAlignment = Enum.TextXAlignment.Left
-wordmark.TextTransparency = 1
-wordmark.ZIndex = 3
-wordmark.Parent = launcher
-local wGrad = grad(wordmark, {Color3.fromRGB(255,255,255), T.Cyan}, 0)
-
--- pulse loop
+-- animated underline sweep
 task.spawn(function()
     while launcher.Parent do
-        halo.Size = UDim2.new(1,0,1,0)
-        haloStroke.Transparency = 0.4
-        TweenService:Create(halo, TweenInfo.new(1.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = UDim2.new(1, 40, 1, 40)
-        }):Play()
-        TweenService:Create(haloStroke, TweenInfo.new(1.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Transparency = 1
-        }):Play()
-        task.wait(1.8)
-    end
-end)
-
--- rainbow border loop
-task.spawn(function()
-    while launcher.Parent do
-        for _ = 1, 360 do
-            conicGrad.Rotation = (conicGrad.Rotation + 1) % 360
-            nGrad.Rotation = (nGrad.Rotation + 2) % 360
-            wGrad.Rotation = (wGrad.Rotation + 1.5) % 360
+        for i = 0, 1, 0.01 do
+            ulGrad.Offset = Vector2.new(i, 0)
+            lgGrad.Offset = Vector2.new(i, 0)
             RunService.RenderStepped:Wait()
         end
-        local palettes = {
-            {T.Violet, T.Cyan, T.Mint, T.Pink, T.Violet},
-            {T.Cyan, T.Mint, T.Pink, T.Violet, T.Cyan},
-            {T.Mint, T.Pink, T.Violet, T.Cyan, T.Mint},
-            {T.Pink, T.Violet, T.Cyan, T.Mint, T.Pink},
-        }
-        local p = palettes[math.random(1,#palettes)]
-        conicGrad.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0.00, p[1]),
-            ColorSequenceKeypoint.new(0.25, p[2]),
-            ColorSequenceKeypoint.new(0.50, p[3]),
-            ColorSequenceKeypoint.new(0.75, p[4]),
-            ColorSequenceKeypoint.new(1.00, p[5]),
-        })
+        for i = 1, 0, -0.01 do
+            ulGrad.Offset = Vector2.new(i, 0)
+            lgGrad.Offset = Vector2.new(i, 0)
+            RunService.RenderStepped:Wait()
+        end
     end
 end)
 
--- hover expand
-launcher.MouseEnter:Connect(function()
-    TweenService:Create(launcher, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.fromOffset(EXPANDED, COLLAPSED)
-    }):Play()
-    TweenService:Create(wordmark, TweenInfo.new(0.25), {TextTransparency = 0}):Play()
-end)
-launcher.MouseLeave:Connect(function()
-    TweenService:Create(launcher, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-        Size = UDim2.fromOffset(COLLAPSED, COLLAPSED)
-    }):Play()
-    TweenService:Create(wordmark, TweenInfo.new(0.2), {TextTransparency = 1}):Play()
-end)
-
--- =====================================================
--- DRAG + CLICK
--- =====================================================
+-- drag + click
 local THRESH = 6
 local dragging, moved, startPos, dragStart = false, false, nil, nil
 
@@ -267,10 +181,19 @@ UserInputService.InputEnded:Connect(function(i)
     dragging, moved = false, false
 end)
 
+launcher.MouseEnter:Connect(function()
+    TweenService:Create(launcher, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(22, 22, 28)}):Play()
+end)
+launcher.MouseLeave:Connect(function()
+    TweenService:Create(launcher, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(15, 15, 20)}):Play()
+end)
+
 -- =====================================================
--- MENU FRAME
+-- MENU
 -- =====================================================
-local MW, MH = 700, 470
+local MW, MH = 620, 420
+local HEADER_H = 56
+local TABS_H = 40
 
 local menu = Instance.new("Frame")
 menu.Name = "Menu"
@@ -282,220 +205,97 @@ menu.BorderSizePixel = 0
 menu.ClipsDescendants = true
 menu.Visible = false
 menu.Parent = gui
-corner(menu, UDim.new(0, 20))
-stroke(menu, T.Border, 1)
-
-local mGrad = Instance.new("UIGradient")
-mGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(12,12,18)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(6,6,10)),
-})
-mGrad.Rotation = 135
-mGrad.Parent = menu
-
--- ambient glow blobs
-local function blob(pos, size, color, trans, z)
-    local b = Instance.new("Frame")
-    b.AnchorPoint = Vector2.new(0.5,0.5)
-    b.Position = pos
-    b.Size = UDim2.fromOffset(size,size)
-    b.BackgroundColor3 = color
-    b.BackgroundTransparency = trans
-    b.BorderSizePixel = 0
-    b.ZIndex = z or 0
-    b.Parent = menu
-    corner(b, UDim.new(1,0))
-    return b
-end
-blob(UDim2.new(0.15, 0, 0.0, 0), 260, T.Violet, 0.9, 0)
-blob(UDim2.new(0.9, 0, 1.0, 0), 300, T.Cyan, 0.93, 0)
+corner(menu, UDim.new(0, 10))
+stroke(menu, T.Divider, 1, 0.4)
 
 -- =====================================================
--- HEADER (top bar with brand + FPS + ping)
+-- HEADER
 -- =====================================================
-local HEADER_H = 78
-
 local header = Instance.new("Frame")
 header.Size = UDim2.new(1, 0, 0, HEADER_H)
 header.BackgroundTransparency = 1
-header.ZIndex = 4
 header.Parent = menu
 
--- Brand mark
-local bMark = Instance.new("Frame")
-bMark.Size = UDim2.fromOffset(38, 38)
-bMark.Position = UDim2.new(0, 22, 0, 20)
-bMark.BackgroundColor3 = T.Violet
-bMark.BorderSizePixel = 0
-bMark.ZIndex = 4
-bMark.Parent = header
-corner(bMark, UDim.new(0, 11))
-grad(bMark, {T.Violet, T.Cyan}, 45)
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(0, 200, 0, 22)
+title.Position = UDim2.new(0, 20, 0, 17)
+title.BackgroundTransparency = 1
+title.Text = "NOVA"
+title.Font = FONT_B
+title.TextSize = 16
+title.TextColor3 = T.Text
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = header
 
-local bMarkLbl = Instance.new("TextLabel")
-bMarkLbl.Size = UDim2.new(1,0,1,0)
-bMarkLbl.BackgroundTransparency = 1
-bMarkLbl.Text = "N"
-bMarkLbl.Font = FONT_K
-bMarkLbl.TextSize = 20
-bMarkLbl.TextColor3 = Color3.new(1,1,1)
-bMarkLbl.ZIndex = 5
-bMarkLbl.Parent = bMark
+-- divider under header
+local headerDiv = Instance.new("Frame")
+headerDiv.Size = UDim2.new(1, 0, 0, 1)
+headerDiv.Position = UDim2.new(0, 0, 0, HEADER_H)
+headerDiv.BackgroundColor3 = T.Divider
+headerDiv.BorderSizePixel = 0
+headerDiv.Parent = menu
 
--- Brand text
-local bTitle = Instance.new("TextLabel")
-bTitle.Size = UDim2.new(0, 200, 0, 20)
-bTitle.Position = UDim2.new(0, 70, 0, 22)
-bTitle.BackgroundTransparency = 1
-bTitle.Text = "NOVA"
-bTitle.TextColor3 = T.Text
-bTitle.Font = FONT_K
-bTitle.TextSize = 17
-bTitle.TextXAlignment = Enum.TextXAlignment.Left
-bTitle.ZIndex = 4
-bTitle.Parent = header
+-- close ✕
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.fromOffset(28, 28)
+closeBtn.Position = UDim2.new(1, -38, 0, 14)
+closeBtn.BackgroundColor3 = Color3.fromRGB(22, 22, 27)
+closeBtn.AutoButtonColor = false
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = T.SubText
+closeBtn.Font = FONT_B
+closeBtn.TextSize = 14
+closeBtn.Parent = header
+corner(closeBtn, UDim.new(0, 6))
 
-local bSub = Instance.new("TextLabel")
-bSub.Size = UDim2.new(0, 200, 0, 14)
-bSub.Position = UDim2.new(0, 70, 0, 42)
-bSub.BackgroundTransparency = 1
-bSub.Text = "advanced client"
-bSub.TextColor3 = T.SubText
-bSub.Font = FONT
-bSub.TextSize = 10
-bSub.TextXAlignment = Enum.TextXAlignment.Left
-bSub.ZIndex = 4
-bSub.Parent = header
-
--- Live stats (right side)
-local statsBar = Instance.new("Frame")
-statsBar.Size = UDim2.fromOffset(220, 34)
-statsBar.Position = UDim2.new(1, -300, 0, 24)
-statsBar.BackgroundColor3 = T.Surface
-statsBar.BackgroundTransparency = 0.4
-statsBar.BorderSizePixel = 0
-statsBar.ZIndex = 4
-statsBar.Parent = header
-corner(statsBar, UDim.new(0, 10))
-stroke(statsBar, T.Border, 1, 0.4)
-
-local function statCell(x, dotColor, label)
-    local c = Instance.new("Frame")
-    c.Size = UDim2.new(0, 100, 1, 0)
-    c.Position = UDim2.new(0, x, 0, 0)
-    c.BackgroundTransparency = 1
-    c.ZIndex = 5
-    c.Parent = statsBar
-
-    local dot = Instance.new("Frame")
-    dot.Size = UDim2.fromOffset(6, 6)
-    dot.Position = UDim2.new(0, 12, 0.5, -3)
-    dot.BackgroundColor3 = dotColor
-    dot.BorderSizePixel = 0
-    dot.ZIndex = 5
-    dot.Parent = c
-    corner(dot, UDim.new(1,0))
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(0, 40, 1, 0)
-    lbl.Position = UDim2.new(0, 24, 0, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = label
-    lbl.TextColor3 = T.SubText
-    lbl.Font = FONT_M
-    lbl.TextSize = 10
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.ZIndex = 5
-    lbl.Parent = c
-
-    local val = Instance.new("TextLabel")
-    val.Size = UDim2.new(0, 40, 1, 0)
-    val.Position = UDim2.new(1, -42, 0, 0)
-    val.BackgroundTransparency = 1
-    val.Text = "--"
-    val.TextColor3 = T.Text
-    val.Font = FONT_B
-    val.TextSize = 11
-    val.TextXAlignment = Enum.TextXAlignment.Right
-    val.ZIndex = 5
-    val.Parent = c
-
-    return val
-end
-
-local fpsVal  = statCell(0,   T.Mint, "FPS")
-local pingVal = statCell(110, T.Cyan, "MS")
-
--- live update
-task.spawn(function()
-    while menu.Parent do
-        local ok, fps = pcall(function() return math.floor(Stats.RenderFPS:GetValue()) end)
-        fpsVal.Text = ok and tostring(fps) or "--"
-        local ok2, ping = pcall(function() return math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
-        pingVal.Text = ok2 and tostring(ping) or "--"
-        task.wait(0.5)
-    end
+closeBtn.MouseEnter:Connect(function()
+    TweenService:Create(closeBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = T.Red, TextColor3 = Color3.new(1,1,1)
+    }):Play()
+end)
+closeBtn.MouseLeave:Connect(function()
+    TweenService:Create(closeBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Color3.fromRGB(22, 22, 27), TextColor3 = T.SubText
+    }):Play()
 end)
 
--- close & minimize
-local function makeHeaderBtn(txt, xOff, hover)
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.fromOffset(32, 32)
-    b.Position = UDim2.new(1, xOff, 0, 23)
-    b.BackgroundColor3 = T.Surface
-    b.BackgroundTransparency = 0.3
-    b.Text = txt
-    b.TextColor3 = T.SubText
-    b.Font = FONT_B
-    b.TextSize = 14
-    b.AutoButtonColor = false
-    b.ZIndex = 5
-    b.Parent = header
-    corner(b, UDim.new(0, 9))
-    stroke(b, T.Border, 1, 0.4)
-    b.MouseEnter:Connect(function()
-        TweenService:Create(b, TweenInfo.new(0.15), {BackgroundTransparency = 0, BackgroundColor3 = hover or T.Elevated, TextColor3 = Color3.new(1,1,1)}):Play()
-    end)
-    b.MouseLeave:Connect(function()
-        TweenService:Create(b, TweenInfo.new(0.15), {BackgroundTransparency = 0.3, BackgroundColor3 = T.Surface, TextColor3 = T.SubText}):Play()
-    end)
-    return b
-end
+-- minimize —
+local minBtn = Instance.new("TextButton")
+minBtn.Size = UDim2.fromOffset(28, 28)
+minBtn.Position = UDim2.new(1, -72, 0, 14)
+minBtn.BackgroundColor3 = Color3.fromRGB(22, 22, 27)
+minBtn.AutoButtonColor = false
+minBtn.Text = "—"
+minBtn.TextColor3 = T.SubText
+minBtn.Font = FONT_B
+minBtn.TextSize = 14
+minBtn.Parent = header
+corner(minBtn, UDim.new(0, 6))
 
-local closeBtn = makeHeaderBtn("✕", -46, T.Red)
-local minBtn   = makeHeaderBtn("—", -84)
+minBtn.MouseEnter:Connect(function()
+    TweenService:Create(minBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Color3.fromRGB(40, 40, 48), TextColor3 = Color3.new(1,1,1)
+    }):Play()
+end)
+minBtn.MouseLeave:Connect(function()
+    TweenService:Create(minBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Color3.fromRGB(22, 22, 27), TextColor3 = T.SubText
+    }):Play()
+end)
 
 -- =====================================================
--- TAB STRIP (horizontal segmented control)
+-- TAB STRIP (text-only, minimal)
 -- =====================================================
-local TABS_H = 44
 local tabStrip = Instance.new("Frame")
-tabStrip.Size = UDim2.new(1, -44, 0, TABS_H)
-tabStrip.Position = UDim2.new(0, 22, 0, HEADER_H)
-tabStrip.BackgroundColor3 = T.Surface
-tabStrip.BackgroundTransparency = 0.4
-tabStrip.BorderSizePixel = 0
-tabStrip.ZIndex = 4
+tabStrip.Size = UDim2.new(1, 0, 0, TABS_H)
+tabStrip.Position = UDim2.new(0, 0, 0, HEADER_H + 1)
+tabStrip.BackgroundTransparency = 1
 tabStrip.Parent = menu
-corner(tabStrip, UDim.new(0, 12))
-stroke(tabStrip, T.Border, 1, 0.4)
-pad(tabStrip, 4, 4, 4, 4)
-
--- indicator (sliding pill)
-local indicator = Instance.new("Frame")
-indicator.Size = UDim2.new(0, 100, 1, 0)
-indicator.Position = UDim2.new(0, 0, 0, 0)
-indicator.BackgroundColor3 = T.Violet
-indicator.BorderSizePixel = 0
-indicator.ZIndex = 5
-indicator.Parent = tabStrip
-corner(indicator, UDim.new(0, 9))
-grad(indicator, {T.Violet, T.Cyan}, 45)
 
 local tabRow = Instance.new("Frame")
-tabRow.Size = UDim2.new(1, 0, 1, 0)
+tabRow.Size = UDim2.new(1, -32, 1, 0)
+tabRow.Position = UDim2.new(0, 16, 0, 0)
 tabRow.BackgroundTransparency = 1
-tabRow.ZIndex = 6
 tabRow.Parent = tabStrip
 
 local tabLayout = Instance.new("UIListLayout")
@@ -503,77 +303,38 @@ tabLayout.FillDirection = Enum.FillDirection.Horizontal
 tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
 tabLayout.Parent = tabRow
 
+-- sliding underline indicator
+local indicator = Instance.new("Frame")
+indicator.Size = UDim2.new(0, 60, 0, 2)
+indicator.Position = UDim2.new(0, 16, 1, -3)
+indicator.BackgroundColor3 = T.Accent
+indicator.BorderSizePixel = 0
+indicator.Parent = tabStrip
+corner(indicator, UDim.new(1, 0))
+
+-- divider
+local tabDiv = Instance.new("Frame")
+tabDiv.Size = UDim2.new(1, 0, 0, 1)
+tabDiv.Position = UDim2.new(0, 0, 0, HEADER_H + TABS_H + 1)
+tabDiv.BackgroundColor3 = T.Divider
+tabDiv.BorderSizePixel = 0
+tabDiv.Parent = menu
+
 -- =====================================================
 -- PAGE HOLDER
 -- =====================================================
 local pageHolder = Instance.new("Frame")
-pageHolder.Size = UDim2.new(1, -44, 1, -(HEADER_H + TABS_H + 34))
-pageHolder.Position = UDim2.new(0, 22, 0, HEADER_H + TABS_H + 12)
+pageHolder.Size = UDim2.new(1, 0, 1, -(HEADER_H + TABS_H + 2))
+pageHolder.Position = UDim2.new(0, 0, 0, HEADER_H + TABS_H + 2)
 pageHolder.BackgroundTransparency = 1
-pageHolder.ZIndex = 4
 pageHolder.Parent = menu
+pad(pageHolder, 16, 16, 12, 16)
 
 local pages = {}
 local tabs = {}
-local currentPage = nil
 
 local function showPage(name)
-    for n, p in pairs(pages) do
-        p.Visible = (n == name)
-    end
-end
-
-local function registerTab(name, order)
-    local tabBtn = Instance.new("TextButton")
-    tabBtn.Size = UDim2.new(0, 110, 1, 0)
-    tabBtn.BackgroundTransparency = 1
-    tabBtn.Text = ""
-    tabBtn.AutoButtonColor = false
-    tabBtn.LayoutOrder = order
-    tabBtn.ZIndex = 6
-    tabBtn.Parent = tabRow
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, 0, 1, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = name
-    lbl.Font = FONT_S
-    lbl.TextSize = 12
-    lbl.TextColor3 = T.SubText
-    lbl.ZIndex = 7
-    lbl.Parent = tabBtn
-
-    tabBtn.MouseButton1Click:Connect(function()
-        for _, t in ipairs(tabs) do
-            t.deactivate()
-        end
-        -- move indicator
-        TweenService:Create(indicator, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Position = UDim2.new(0, tabBtn.AbsolutePosition.X - tabStrip.AbsolutePosition.X - 4, 0, 0),
-            Size = UDim2.new(0, tabBtn.AbsoluteSize.X, 1, 0)
-        }):Play()
-        -- animate label
-        TweenService:Create(lbl, TweenInfo.new(0.2), {TextColor3 = Color3.new(1,1,1)}):Play()
-        showPage(name)
-    end)
-
-    tabBtn.MouseEnter:Connect(function()
-        if lbl.TextColor3 ~= Color3.new(1,1,1) then
-            TweenService:Create(lbl, TweenInfo.new(0.15), {TextColor3 = Color3.fromRGB(200,200,220)}):Play()
-        end
-    end)
-    tabBtn.MouseLeave:Connect(function()
-        if lbl.TextColor3 ~= Color3.new(1,1,1) then
-            TweenService:Create(lbl, TweenInfo.new(0.15), {TextColor3 = T.SubText}):Play()
-        end
-    end)
-
-    local function deactivate()
-        TweenService:Create(lbl, TweenInfo.new(0.2), {TextColor3 = T.SubText}):Play()
-    end
-
-    tabs[#tabs+1] = {deactivate = deactivate, button = tabBtn}
-    return tabBtn
+    for n, p in pairs(pages) do p.Visible = (n == name) end
 end
 
 local function createPage(name)
@@ -581,239 +342,228 @@ local function createPage(name)
     p.Size = UDim2.new(1, 0, 1, 0)
     p.BackgroundTransparency = 1
     p.BorderSizePixel = 0
-    p.ScrollBarThickness = 3
-    p.ScrollBarImageColor3 = T.Violet
+    p.ScrollBarThickness = 2
+    p.ScrollBarImageColor3 = T.Muted
     p.ScrollBarImageTransparency = 0.4
     p.CanvasSize = UDim2.new(0,0,0,0)
     p.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    p.ZIndex = 4
     p.Visible = false
     p.Parent = pageHolder
-    pad(p, 0, 10, 0, 0)
     local lay = Instance.new("UIListLayout")
-    lay.Padding = UDim.new(0, 10)
+    lay.Padding = UDim.new(0, 8)
     lay.SortOrder = Enum.SortOrder.LayoutOrder
     lay.Parent = p
     pages[name] = p
     return p
 end
 
+local function registerTab(name, order)
+    local tab = Instance.new("TextButton")
+    tab.Size = UDim2.new(0, 84, 1, 0)
+    tab.BackgroundTransparency = 1
+    tab.Text = name
+    tab.Font = FONT_M
+    tab.TextSize = 13
+    tab.TextColor3 = T.SubText
+    tab.AutoButtonColor = false
+    tab.LayoutOrder = order
+    tab.Parent = tabRow
+
+    local function setActive(active)
+        TweenService:Create(tab, TweenInfo.new(0.18), {
+            TextColor3 = active and T.Text or T.SubText
+        }):Play()
+    end
+
+    tab.MouseEnter:Connect(function()
+        if tab.TextColor3 ~= T.Text then
+            TweenService:Create(tab, TweenInfo.new(0.15), {
+                TextColor3 = Color3.fromRGB(190,190,205)
+            }):Play()
+        end
+    end)
+    tab.MouseLeave:Connect(function()
+        if tab.TextColor3 ~= T.Text then
+            TweenService:Create(tab, TweenInfo.new(0.15), {
+                TextColor3 = T.SubText
+            }):Play()
+        end
+    end)
+
+    tab.MouseButton1Click:Connect(function()
+        for _, t in ipairs(tabs) do t.setActive(false) end
+        setActive(true)
+        TweenService:Create(indicator, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Position = UDim2.new(0, tab.AbsolutePosition.X - tabStrip.AbsolutePosition.X, 1, -3),
+            Size = UDim2.new(0, tab.AbsoluteSize.X, 0, 2),
+        }):Play()
+        showPage(name)
+    end)
+
+    local entry = {button = tab, setActive = setActive}
+    tabs[#tabs+1] = entry
+    return entry
+end
+
 -- =====================================================
--- ROW (toggle / slider) — new "chip" design
+-- ROW: TOGGLE  (flat, no switch circle knob)
 -- =====================================================
 local function createToggle(parent, name, desc, order, callback)
     local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, 0, 0, 62)
-    row.BackgroundColor3 = T.Elevated
-    row.BackgroundTransparency = 0.15
+    row.Size = UDim2.new(1, 0, 0, 56)
+    row.BackgroundColor3 = T.Surface
     row.BorderSizePixel = 0
     row.LayoutOrder = order
-    row.ZIndex = 4
     row.Parent = parent
-    corner(row, UDim.new(0, 14))
-    local rs = stroke(row, T.Border, 1, 0.4)
-
-    -- left accent bar (glows when ON)
-    local accentBar = Instance.new("Frame")
-    accentBar.AnchorPoint = Vector2.new(0, 0.5)
-    accentBar.Position = UDim2.new(0, 12, 0.5, 0)
-    accentBar.Size = UDim2.new(0, 3, 0, 0)
-    accentBar.BackgroundColor3 = T.Violet
-    accentBar.BorderSizePixel = 0
-    accentBar.ZIndex = 5
-    accentBar.Parent = row
-    corner(accentBar, UDim.new(1, 0))
+    corner(row, UDim.new(0, 6))
 
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -140, 0, 20)
-    title.Position = UDim2.new(0, 28, 0, 12)
+    title.Size = UDim2.new(1, -120, 0, 18)
+    title.Position = UDim2.new(0, 14, 0, 10)
     title.BackgroundTransparency = 1
     title.Text = name
     title.TextColor3 = T.Text
-    title.Font = FONT_S
-    title.TextSize = 14
+    title.Font = FONT_M
+    title.TextSize = 13
     title.TextXAlignment = Enum.TextXAlignment.Left
-    title.ZIndex = 5
     title.Parent = row
 
     local sub = Instance.new("TextLabel")
-    sub.Size = UDim2.new(1, -140, 0, 16)
-    sub.Position = UDim2.new(0, 28, 0, 34)
+    sub.Size = UDim2.new(1, -120, 0, 14)
+    sub.Position = UDim2.new(0, 14, 0, 30)
     sub.BackgroundTransparency = 1
     sub.Text = desc
     sub.TextColor3 = T.SubText
     sub.Font = FONT
-    sub.TextSize = 11
+    sub.TextSize = 10
     sub.TextXAlignment = Enum.TextXAlignment.Left
-    sub.ZIndex = 5
     sub.Parent = row
 
-    -- status pill
-    local pill = Instance.new("TextLabel")
-    pill.Size = UDim2.fromOffset(46, 22)
-    pill.Position = UDim2.new(1, -110, 0.5, -11)
-    pill.BackgroundColor3 = T.Off
-    pill.BackgroundTransparency = 0.4
-    pill.Text = "OFF"
-    pill.TextColor3 = T.SubText
-    pill.Font = FONT_B
-    pill.TextSize = 9
-    pill.ZIndex = 5
-    pill.Parent = row
-    corner(pill, UDim.new(0, 7))
-
-    -- switch
-    local sw = Instance.new("Frame")
-    sw.Size = UDim2.fromOffset(48, 26)
-    sw.Position = UDim2.new(1, -60, 0.5, -13)
-    sw.BackgroundColor3 = T.Off
-    sw.BorderSizePixel = 0
-    sw.ZIndex = 5
-    sw.Parent = row
-    corner(sw, UDim.new(1, 0))
+    -- Minimal toggle: rectangular track + rectangular knob (no full circles)
+    local track = Instance.new("Frame")
+    track.Size = UDim2.fromOffset(40, 20)
+    track.Position = UDim2.new(1, -54, 0.5, -10)
+    track.BackgroundColor3 = T.Off
+    track.BorderSizePixel = 0
+    track.Parent = row
+    corner(track, UDim.new(0, 4))
 
     local knob = Instance.new("Frame")
-    knob.Size = UDim2.fromOffset(20, 20)
-    knob.Position = UDim2.new(0, 3, 0.5, -10)
-    knob.BackgroundColor3 = Color3.fromRGB(245,245,252)
+    knob.Size = UDim2.fromOffset(16, 16)
+    knob.Position = UDim2.new(0, 2, 0.5, -8)
+    knob.BackgroundColor3 = Color3.fromRGB(230, 230, 240)
     knob.BorderSizePixel = 0
-    knob.ZIndex = 6
-    knob.Parent = sw
-    corner(knob, UDim.new(1, 0))
+    knob.Parent = track
+    corner(knob, UDim.new(0, 3))
 
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1,0,1,0)
+    btn.Size = UDim2.new(1, 0, 1, 0)
     btn.BackgroundTransparency = 1
     btn.Text = ""
-    btn.ZIndex = 7
-    btn.Parent = sw
+    btn.Parent = track
 
     local isOn = false
     local function set(on)
         isOn = on
         if on then
-            TweenService:Create(sw, TweenInfo.new(0.22), {BackgroundColor3 = T.Violet}):Play()
-            TweenService:Create(knob, TweenInfo.new(0.26, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                Position = UDim2.new(1, -23, 0.5, -10)
+            TweenService:Create(track, TweenInfo.new(0.18), {BackgroundColor3 = T.Accent}):Play()
+            TweenService:Create(knob, TweenInfo.new(0.2), {
+                Position = UDim2.new(1, -18, 0.5, -8)
             }):Play()
-            TweenService:Create(accentBar, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
-                Size = UDim2.new(0, 3, 0, 34)
-            }):Play()
-            TweenService:Create(pill, TweenInfo.new(0.2), {
-                BackgroundColor3 = T.Violet, BackgroundTransparency = 0, TextColor3 = Color3.new(1,1,1)
-            }):Play()
-            pill.Text = "ON"
         else
-            TweenService:Create(sw, TweenInfo.new(0.22), {BackgroundColor3 = T.Off}):Play()
-            TweenService:Create(knob, TweenInfo.new(0.26, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                Position = UDim2.new(0, 3, 0.5, -10)
+            TweenService:Create(track, TweenInfo.new(0.18), {BackgroundColor3 = T.Off}):Play()
+            TweenService:Create(knob, TweenInfo.new(0.2), {
+                Position = UDim2.new(0, 2, 0.5, -8)
             }):Play()
-            TweenService:Create(accentBar, TweenInfo.new(0.2), {
-                Size = UDim2.new(0, 3, 0, 0)
-            }):Play()
-            TweenService:Create(pill, TweenInfo.new(0.2), {
-                BackgroundColor3 = T.Off, BackgroundTransparency = 0.4, TextColor3 = T.SubText
-            }):Play()
-            pill.Text = "OFF"
         end
         if callback then pcall(callback, on) end
     end
 
     btn.MouseButton1Click:Connect(function() set(not isOn) end)
 
+    -- whole row is clickable too
+    row.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1
+            or i.UserInputType == Enum.UserInputType.Touch then
+            -- skip if clicked the switch (btn handles that)
+        end
+    end)
+
     row.MouseEnter:Connect(function()
-        TweenService:Create(row, TweenInfo.new(0.15), {BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(26,26,38)}):Play()
-        TweenService:Create(rs, TweenInfo.new(0.15), {Color = T.Violet, Transparency = 0}):Play()
+        TweenService:Create(row, TweenInfo.new(0.15), {BackgroundColor3 = T.Surface2}):Play()
     end)
     row.MouseLeave:Connect(function()
-        TweenService:Create(row, TweenInfo.new(0.15), {BackgroundTransparency = 0.15, BackgroundColor3 = T.Elevated}):Play()
-        TweenService:Create(rs, TweenInfo.new(0.15), {Color = T.Border, Transparency = 0.4}):Play()
+        TweenService:Create(row, TweenInfo.new(0.15), {BackgroundColor3 = T.Surface}):Play()
     end)
 
     return row, set
 end
 
--- slider row
+-- =====================================================
+-- ROW: SLIDER  (flat, thin track)
+-- =====================================================
 local function createSlider(parent, name, minV, maxV, default, order, callback)
     local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, 0, 0, 72)
-    row.BackgroundColor3 = T.Elevated
-    row.BackgroundTransparency = 0.15
+    row.Size = UDim2.new(1, 0, 0, 62)
+    row.BackgroundColor3 = T.Surface
     row.BorderSizePixel = 0
     row.LayoutOrder = order
-    row.ZIndex = 4
     row.Parent = parent
-    corner(row, UDim.new(0, 14))
-    local rs = stroke(row, T.Border, 1, 0.4)
+    corner(row, UDim.new(0, 6))
 
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -120, 0, 18)
-    title.Position = UDim2.new(0, 20, 0, 12)
+    title.Size = UDim2.new(1, -100, 0, 18)
+    title.Position = UDim2.new(0, 14, 0, 10)
     title.BackgroundTransparency = 1
     title.Text = name
     title.TextColor3 = T.Text
-    title.Font = FONT_S
-    title.TextSize = 14
+    title.Font = FONT_M
+    title.TextSize = 13
     title.TextXAlignment = Enum.TextXAlignment.Left
-    title.ZIndex = 5
     title.Parent = row
 
-    local valBox = Instance.new("Frame")
-    valBox.Size = UDim2.fromOffset(58, 22)
-    valBox.Position = UDim2.new(1, -78, 0, 10)
-    valBox.BackgroundColor3 = T.Surface
-    valBox.BorderSizePixel = 0
-    valBox.ZIndex = 5
-    valBox.Parent = row
-    corner(valBox, UDim.new(0, 7))
-    stroke(valBox, T.Border, 1, 0.4)
-
-    local valLbl = Instance.new("TextLabel")
-    valLbl.Size = UDim2.new(1,0,1,0)
-    valLbl.BackgroundTransparency = 1
-    valLbl.Text = tostring(default)
-    valLbl.TextColor3 = T.Violet
-    valLbl.Font = FONT_B
-    valLbl.TextSize = 12
-    valLbl.ZIndex = 6
-    valLbl.Parent = valBox
+    local value = Instance.new("TextLabel")
+    value.Size = UDim2.new(0, 70, 0, 18)
+    value.Position = UDim2.new(1, -84, 0, 10)
+    value.BackgroundTransparency = 1
+    value.Text = tostring(default)
+    value.TextColor3 = T.Accent
+    value.Font = FONT_B
+    value.TextSize = 12
+    value.TextXAlignment = Enum.TextXAlignment.Right
+    value.Parent = row
 
     local track = Instance.new("Frame")
-    track.Size = UDim2.new(1, -40, 0, 8)
-    track.Position = UDim2.new(0, 20, 0, 46)
+    track.Size = UDim2.new(1, -28, 0, 4)
+    track.Position = UDim2.new(0, 14, 0, 42)
     track.BackgroundColor3 = T.Off
     track.BorderSizePixel = 0
-    track.ZIndex = 5
     track.Parent = row
-    corner(track, UDim.new(1,0))
+    corner(track, UDim.new(1, 0))
 
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new((default - minV)/(maxV - minV), 0, 1, 0)
-    fill.BackgroundColor3 = T.Violet
+    fill.BackgroundColor3 = T.Accent
     fill.BorderSizePixel = 0
-    fill.ZIndex = 6
     fill.Parent = track
-    corner(fill, UDim.new(1,0))
-    grad(fill, {T.Violet, T.Cyan}, 0)
+    corner(fill, UDim.new(1, 0))
 
     local knob = Instance.new("Frame")
     knob.AnchorPoint = Vector2.new(0.5, 0.5)
-    knob.Size = UDim2.fromOffset(18, 18)
+    knob.Size = UDim2.fromOffset(10, 10)
     knob.Position = UDim2.new(fill.Size.X.Scale, 0, 0.5, 0)
     knob.BackgroundColor3 = Color3.new(1,1,1)
     knob.BorderSizePixel = 0
-    knob.ZIndex = 7
     knob.Parent = track
-    corner(knob, UDim.new(1,0))
-    stroke(knob, T.Violet, 2, 0.2)
+    corner(knob, UDim.new(1, 0))
 
     local draggingS = false
     local function setFromX(x)
         local rel = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
         local v = math.floor(minV + (maxV - minV) * rel + 0.5)
-        valLbl.Text = tostring(v)
-        TweenService:Create(fill, TweenInfo.new(0.08), {Size = UDim2.new(rel,0,1,0)}):Play()
-        TweenService:Create(knob, TweenInfo.new(0.08), {Position = UDim2.new(rel,0,0.5,0)}):Play()
+        value.Text = tostring(v)
+        TweenService:Create(fill, TweenInfo.new(0.06), {Size = UDim2.new(rel,0,1,0)}):Play()
+        TweenService:Create(knob, TweenInfo.new(0.06), {Position = UDim2.new(rel,0,0.5,0)}):Play()
         if callback then pcall(callback, v) end
     end
     track.InputBegan:Connect(function(i)
@@ -837,10 +587,10 @@ local function createSlider(parent, name, minV, maxV, default, order, callback)
     end)
 
     row.MouseEnter:Connect(function()
-        TweenService:Create(rs, TweenInfo.new(0.15), {Color = T.Violet, Transparency = 0}):Play()
+        TweenService:Create(row, TweenInfo.new(0.15), {BackgroundColor3 = T.Surface2}):Play()
     end)
     row.MouseLeave:Connect(function()
-        TweenService:Create(rs, TweenInfo.new(0.15), {Color = T.Border, Transparency = 0.4}):Play()
+        TweenService:Create(row, TweenInfo.new(0.15), {BackgroundColor3 = T.Surface}):Play()
     end)
     return row
 end
@@ -851,8 +601,8 @@ end
 local fpsSnap = {}
 local function setFPSBoost(on)
     if on then
-        fpsSnap = {shadows = Lighting.GlobalShadows, fog = Lighting.FogEnd, bright = Lighting.Brightness,
-                   ed = Lighting.EnvironmentDiffuseScale, es = Lighting.EnvironmentSpecularScale}
+        fpsSnap = {shadows=Lighting.GlobalShadows, fog=Lighting.FogEnd, bright=Lighting.Brightness,
+                   ed=Lighting.EnvironmentDiffuseScale, es=Lighting.EnvironmentSpecularScale}
         Lighting.GlobalShadows = false
         Lighting.FogEnd = 1e5
         Lighting.Brightness = 2
@@ -931,8 +681,7 @@ local function setFullBright(on)
         Lighting.ClockTime = brightSnap.ct or 14
         Lighting.FogEnd = brightSnap.fog or 1e5
         Lighting.GlobalShadows = brightSnap.sh ~= false
-        local cc = Lighting:FindFirstChild("NOVA_CC")
-        if cc then cc:Destroy() end
+        local cc = Lighting:FindFirstChild("NOVA_CC"); if cc then cc:Destroy() end
     end
 end
 
@@ -1002,39 +751,33 @@ end)
 -- =====================================================
 -- BUILD PAGES
 -- =====================================================
-local generalPage = createPage("General")
+local generalPage  = createPage("General")
 local movementPage = createPage("Movement")
-local visualPage = createPage("Visuals")
+local visualPage   = createPage("Visuals")
 
--- General tab
 registerTab("General", 1)
-createToggle(generalPage, "FPS Boost",    "Boost rendering performance", 1, function(on) State.FPSBoost = on setFPSBoost(on) end)
-createToggle(generalPage, "Anti Lag",     "Disable particle & effects lag", 2, function(on) State.AntiLag = on setAntiLag(on) end)
-createToggle(generalPage, "Anti AFK",     "Prevent 20-minute idle kick", 3, function(on) State.AntiAFK = on setAntiAFK(on) end)
+createToggle(generalPage, "FPS Boost", "Boost rendering performance", 1, function(on) State.FPSBoost = on setFPSBoost(on) end)
+createToggle(generalPage, "Anti Lag",  "Disable particle & effects lag", 2, function(on) State.AntiLag = on setAntiLag(on) end)
+createToggle(generalPage, "Anti AFK",  "Prevent 20-minute idle kick", 3, function(on) State.AntiAFK = on setAntiAFK(on) end)
 
--- Movement tab
 registerTab("Movement", 2)
 createToggle(movementPage, "Infinite Jump", "Jump endlessly mid-air", 1, function(on) State.InfiniteJmp = on setInfiniteJump(on) end)
 createToggle(movementPage, "No Clip",       "Walk through walls", 2, function(on) State.NoClip = on setNoClip(on) end)
 createSlider(movementPage, "Walk Speed", 16, 250, 16, 3, function(v) State.WalkSpeed = v setWalkSpeed(v) end)
 createSlider(movementPage, "Jump Power", 50, 300, 50, 4, function(v) State.JumpPower = v setJumpPower(v) end)
 
--- Visuals tab
 registerTab("Visuals", 3)
 createToggle(visualPage, "Full Bright", "See in the dark everywhere", 1, function(on) State.FullBright = on setFullBright(on) end)
 
--- activate first tab (need to trigger click since indicator depends on size)
+-- activate first tab
 task.defer(function()
     task.wait(0.1)
-    tabs[1].button:FindFirstChildOfClass("TextButton") -- no-op
-    tabs[1].button.MouseButton1Click:Fire()
-    -- manual trigger:
-    for _,t in ipairs(tabs) do t.deactivate() end
-    local lbl = tabs[1].button:FindFirstChildOfClass("TextLabel")
-    if lbl then lbl.TextColor3 = Color3.new(1,1,1) end
-    TweenService:Create(indicator, TweenInfo.new(0.35, Enum.EasingStyle.Back), {
-        Position = UDim2.new(0, 0, 0, 0),
-        Size = UDim2.new(0, tabs[1].button.AbsoluteSize.X, 1, 0)
+    local first = tabs[1]
+    for _, t in ipairs(tabs) do t.setActive(false) end
+    first.setActive(true)
+    TweenService:Create(indicator, TweenInfo.new(0.2), {
+        Position = UDim2.new(0, first.button.AbsolutePosition.X - tabStrip.AbsolutePosition.X, 1, -3),
+        Size = UDim2.new(0, first.button.AbsoluteSize.X, 0, 2),
     }):Play()
     showPage("General")
 end)
@@ -1048,21 +791,21 @@ local function openMenu()
     if isOpen or busy then return end
     busy = true; isOpen = true
     menu.Visible = true
-    menu.Size = UDim2.fromOffset(MW - 80, MH - 40)
-    TweenService:Create(menu, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    menu.Size = UDim2.fromOffset(MW - 40, MH - 20)
+    TweenService:Create(menu, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
         Size = UDim2.fromOffset(MW, MH)
     }):Play()
-    task.wait(0.1)
+    task.wait(0.05)
     busy = false
 end
 
 local function closeMenu()
     if not isOpen or busy then return end
     busy = true; isOpen = false
-    TweenService:Create(menu, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-        Size = UDim2.fromOffset(MW - 80, MH - 40)
+    TweenService:Create(menu, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Size = UDim2.fromOffset(MW - 40, MH - 20)
     }):Play()
-    task.wait(0.2)
+    task.wait(0.15)
     menu.Visible = false
     busy = false
 end
@@ -1077,4 +820,4 @@ UserInputService.InputBegan:Connect(function(i, gp)
     if i.KeyCode == Enum.KeyCode.RightShift then _G.__NOVA_toggle() end
 end)
 
-print("[NOVA] v6 loaded — click the pill button.")
+print("[NOVA] v7 loaded.")
