@@ -1,15 +1,6 @@
 --[[
-    NOVA Client GUI v4 — Neo Modern
+    NOVA Client GUI v5
     Location: StarterPlayer > StarterPlayerScripts (LocalScript)
-
-    Features (all functional):
-      • FPS Boost   → lowers render quality, disables post effects, reduces shadows
-      • Anti Lag    → removes particles/decals/effects + stream-friendly
-      • Anti AFK    → prevents 20-min idle kick
-      • Full Bright → boosts lighting visibility
-      • Infinite Jump
-      • Walk Speed  → slider
-      • Jump Power  → slider
 --]]
 
 local Players          = game:GetService("Players")
@@ -24,27 +15,22 @@ local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 -- =====================================================
--- THEME  (neo / neon modern)
+-- THEME
 -- =====================================================
 local T = {
-    Bg          = Color3.fromRGB(8, 8, 12),
-    Bg2         = Color3.fromRGB(13, 13, 20),
-    Panel       = Color3.fromRGB(15, 15, 22),
-    Card        = Color3.fromRGB(21, 21, 30),
-    CardHover   = Color3.fromRGB(27, 27, 38),
-    Border      = Color3.fromRGB(38, 38, 54),
-    BorderHot   = Color3.fromRGB(110, 80, 255),
-
-    Text        = Color3.fromRGB(244, 244, 252),
-    SubText     = Color3.fromRGB(138, 138, 165),
-    Dim         = Color3.fromRGB(90, 90, 110),
-
-    Accent      = Color3.fromRGB(124, 92, 255),   -- violet
-    Accent2     = Color3.fromRGB(0, 220, 255),    -- cyan
-    Accent3     = Color3.fromRGB(255, 92, 180),   -- pink
-    Green       = Color3.fromRGB(60, 220, 140),
-    Red         = Color3.fromRGB(255, 70, 100),
-    Off         = Color3.fromRGB(46, 46, 62),
+    Bg         = Color3.fromRGB(8, 8, 12),
+    Panel      = Color3.fromRGB(15, 15, 22),
+    Card       = Color3.fromRGB(21, 21, 30),
+    CardHover  = Color3.fromRGB(27, 27, 38),
+    Border     = Color3.fromRGB(38, 38, 54),
+    BorderHot  = Color3.fromRGB(110, 80, 255),
+    Text       = Color3.fromRGB(244, 244, 252),
+    SubText    = Color3.fromRGB(138, 138, 165),
+    Dim        = Color3.fromRGB(90, 90, 110),
+    Accent     = Color3.fromRGB(124, 92, 255),
+    Accent2    = Color3.fromRGB(0, 220, 255),
+    Accent3    = Color3.fromRGB(255, 92, 180),
+    Off        = Color3.fromRGB(46, 46, 62),
 }
 
 local FONT   = Enum.Font.GothamMedium
@@ -53,7 +39,7 @@ local FONT_B = Enum.Font.GothamBold
 local FONT_K = Enum.Font.GothamBlack
 
 -- =====================================================
--- FEATURE STATE
+-- STATE
 -- =====================================================
 local State = {
     FPSBoost    = false,
@@ -68,47 +54,28 @@ local State = {
 -- =====================================================
 -- HELPERS
 -- =====================================================
-local function corner(parent, radius)
-    local c = Instance.new("UICorner")
-    c.CornerRadius = radius or UDim.new(0, 12)
-    c.Parent = parent
-    return c
-end
-
-local function stroke(parent, color, thickness, transparency)
+local function corner(p, r) local c = Instance.new("UICorner"); c.CornerRadius = r or UDim.new(0,12); c.Parent = p; return c end
+local function stroke(p, c, t, tr)
     local s = Instance.new("UIStroke")
-    s.Color = color or T.Border
-    s.Thickness = thickness or 1
-    s.Transparency = transparency or 0
+    s.Color = c or T.Border; s.Thickness = t or 1; s.Transparency = tr or 0
     s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    s.Parent = parent
-    return s
+    s.Parent = p; return s
 end
-
-local function gradient(parent, colors, rotation)
+local function gradient(p, cols, rot)
     local g = Instance.new("UIGradient")
-    local kps = {}
-    for i, c in ipairs(colors) do
-        table.insert(kps, ColorSequenceKeypoint.new((i-1)/(#colors-1), c))
-    end
-    g.Color = ColorSequence.new(kps)
-    g.Rotation = rotation or 0
-    g.Parent = parent
-    return g
+    local k = {}
+    for i,c in ipairs(cols) do table.insert(k, ColorSequenceKeypoint.new((i-1)/(#cols-1), c)) end
+    g.Color = ColorSequence.new(k); g.Rotation = rot or 0; g.Parent = p; return g
 end
-
-local function padding(parent, l, r, t, b)
-    local p = Instance.new("UIPadding")
-    p.PaddingLeft   = UDim.new(0, l or 0)
-    p.PaddingRight  = UDim.new(0, r or 0)
-    p.PaddingTop    = UDim.new(0, t or 0)
-    p.PaddingBottom = UDim.new(0, b or 0)
-    p.Parent = parent
-    return p
+local function padding(p,l,r,t,b)
+    local u = Instance.new("UIPadding")
+    u.PaddingLeft = UDim.new(0,l or 0); u.PaddingRight = UDim.new(0,r or 0)
+    u.PaddingTop  = UDim.new(0,t or 0); u.PaddingBottom= UDim.new(0,b or 0)
+    u.Parent = p; return u
 end
 
 -- =====================================================
--- ROOT GUI
+-- ROOT
 -- =====================================================
 local gui = Instance.new("ScreenGui")
 gui.Name = "NOVA"
@@ -119,88 +86,115 @@ gui.DisplayOrder = 9999
 gui.Parent = playerGui
 
 -- =====================================================
--- FLOATING ICON
+-- FLOATING "NOVA" BUTTON
 -- =====================================================
-local ICON = 62
+local BTN_W, BTN_H = 130, 46
 
-local icon = Instance.new("Frame")
-icon.Name = "FloatingIcon"
-icon.Size = UDim2.fromOffset(ICON, ICON)
-icon.Position = UDim2.new(0, 60, 0, 140)
-icon.BackgroundColor3 = Color3.fromRGB(16, 16, 24)
-icon.BorderSizePixel = 0
-icon.Parent = gui
+local novaBtn = Instance.new("Frame")
+novaBtn.Name = "NovaButton"
+novaBtn.Size = UDim2.fromOffset(BTN_W, BTN_H)
+novaBtn.Position = UDim2.new(0, 60, 0, 140)
+novaBtn.BackgroundColor3 = Color3.fromRGB(10, 10, 16)
+novaBtn.BorderSizePixel = 0
+novaBtn.Active = true
+novaBtn.Parent = gui
 
-corner(icon, UDim.new(1, 0))
+corner(novaBtn, UDim.new(1, 0))
 
-local iconGrad = Instance.new("UIGradient")
-iconGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(26, 20, 46)),
+local btnBgGrad = Instance.new("UIGradient")
+btnBgGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 16, 34)),
     ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 18)),
 })
-iconGrad.Rotation = 135
-iconGrad.Parent = icon
+btnBgGrad.Rotation = 135
+btnBgGrad.Parent = novaBtn
 
-local iconStroke = Instance.new("UIStroke")
-iconStroke.Thickness = 2
-iconStroke.Color = T.Accent
-iconStroke.Parent = icon
+-- Animated gradient border (rainbow)
+local btnStroke = Instance.new("UIStroke")
+btnStroke.Thickness = 2
+btnStroke.Color = Color3.new(1, 1, 1)
+btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+btnStroke.Parent = novaBtn
 
-local strokeGrad = Instance.new("UIGradient")
-strokeGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0,   T.Accent),
-    ColorSequenceKeypoint.new(0.5, T.Accent2),
-    ColorSequenceKeypoint.new(1,   T.Accent3),
+local borderGrad = Instance.new("UIGradient")
+borderGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0.00, T.Accent),
+    ColorSequenceKeypoint.new(0.25, T.Accent2),
+    ColorSequenceKeypoint.new(0.50, T.Accent3),
+    ColorSequenceKeypoint.new(0.75, T.Accent2),
+    ColorSequenceKeypoint.new(1.00, T.Accent),
 })
-strokeGrad.Parent = iconStroke
+borderGrad.Parent = btnStroke
 
--- outer glow
-local glow = Instance.new("ImageLabel")
-glow.Size = UDim2.new(1, 40, 1, 40)
-glow.Position = UDim2.new(0, -20, 0, -20)
-glow.BackgroundTransparency = 1
-glow.Image = "rbxassetid://5028857472"
-glow.ImageColor3 = T.Accent
-glow.ImageTransparency = 0.4
-glow.ZIndex = 0
-glow.Parent = icon
+-- Text
+local novaText = Instance.new("TextLabel")
+novaText.Size = UDim2.new(1, 0, 1, 0)
+novaText.BackgroundTransparency = 1
+novaText.Text = "NOVA"
+novaText.Font = FONT_K
+novaText.TextSize = 16
+novaText.TextColor3 = Color3.new(1, 1, 1)
+novaText.Parent = novaBtn
 
--- pulse ring
-local pulse = Instance.new("Frame")
-pulse.AnchorPoint = Vector2.new(0.5, 0.5)
-pulse.Position = UDim2.new(0.5, 0, 0.5, 0)
-pulse.Size = UDim2.new(1, 0, 1, 0)
-pulse.BackgroundTransparency = 1
-pulse.ZIndex = 0
-pulse.Parent = icon
-corner(pulse, UDim.new(1, 0))
-local pulseStroke = stroke(pulse, T.Accent, 2, 0.4)
-pulseStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+local textGrad = Instance.new("UIGradient")
+textGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, T.Accent),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255,255,255)),
+    ColorSequenceKeypoint.new(1, T.Accent2),
+})
+textGrad.Rotation = 45
+textGrad.Parent = novaText
 
--- letter N
-local iconLabel = Instance.new("TextLabel")
-iconLabel.Size = UDim2.new(1, 0, 1, 0)
-iconLabel.BackgroundTransparency = 1
-iconLabel.Text = "N"
-iconLabel.Font = FONT_K
-iconLabel.TextSize = 28
-iconLabel.TextColor3 = Color3.new(1, 1, 1)
-iconLabel.Parent = icon
-local iconTextGrad = gradient(iconLabel, {T.Accent, T.Accent2}, 45)
+-- Glow
+local btnGlow = Instance.new("ImageLabel")
+btnGlow.Size = UDim2.new(1, 36, 1, 36)
+btnGlow.Position = UDim2.new(0, -18, 0, -18)
+btnGlow.BackgroundTransparency = 1
+btnGlow.Image = "rbxassetid://5028857472"
+btnGlow.ImageColor3 = T.Accent
+btnGlow.ImageTransparency = 0.5
+btnGlow.ZIndex = 0
+btnGlow.Parent = novaBtn
 
 -- =====================================================
--- DRAG + CLICK (threshold based)
+-- ANIMATED BORDER LOOP
+-- =====================================================
+task.spawn(function()
+    while novaBtn.Parent do
+        for _ = 1, 360 do
+            borderGrad.Rotation = (borderGrad.Rotation + 1) % 360
+            textGrad.Rotation = (textGrad.Rotation + 1) % 360
+            RunService.RenderStepped:Wait()
+        end
+        -- cycle colors occasionally for extra flair
+        local palette = {
+            {T.Accent,  T.Accent2, T.Accent3, T.Accent2, T.Accent},
+            {T.Accent2, T.Accent3, T.Accent,  T.Accent3, T.Accent2},
+            {T.Accent3, T.Accent,  T.Accent2, T.Accent,  T.Accent3},
+        }
+        local pick = palette[math.random(1, #palette)]
+        borderGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0.00, pick[1]),
+            ColorSequenceKeypoint.new(0.25, pick[2]),
+            ColorSequenceKeypoint.new(0.50, pick[3]),
+            ColorSequenceKeypoint.new(0.75, pick[4]),
+            ColorSequenceKeypoint.new(1.00, pick[5]),
+        })
+    end
+end)
+
+-- =====================================================
+-- DRAG + CLICK
 -- =====================================================
 local DRAG_THRESHOLD = 6
 local dragging, dragMoved, dragStart, startPos = false, false, nil, nil
 
-icon.InputBegan:Connect(function(input)
+novaBtn.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
-        dragging  = true
-        dragMoved = false
+        dragging, dragMoved = true, false
         dragStart = input.Position
-        startPos  = icon.Position
+        startPos  = novaBtn.Position
     end
 end)
 
@@ -208,13 +202,12 @@ UserInputService.InputChanged:Connect(function(input)
     if not dragging then return end
     if input.UserInputType ~= Enum.UserInputType.MouseMovement
         and input.UserInputType ~= Enum.UserInputType.Touch then return end
-
     local d = input.Position - dragStart
     if not dragMoved and (math.abs(d.X) > DRAG_THRESHOLD or math.abs(d.Y) > DRAG_THRESHOLD) then
         dragMoved = true
     end
     if dragMoved then
-        icon.Position = UDim2.new(
+        novaBtn.Position = UDim2.new(
             startPos.X.Scale, startPos.X.Offset + d.X,
             startPos.Y.Scale, startPos.Y.Offset + d.Y
         )
@@ -227,44 +220,19 @@ UserInputService.InputEnded:Connect(function(input)
     if dragging and not dragMoved then
         if _G.__NOVA_toggle then _G.__NOVA_toggle() end
     end
-    dragging  = false
-    dragMoved = false
+    dragging, dragMoved = false, false
 end)
 
 -- hover scale
-icon.MouseEnter:Connect(function()
-    TweenService:Create(icon, TweenInfo.new(0.2), {
-        Size = UDim2.fromOffset(ICON + 6, ICON + 6)
+novaBtn.MouseEnter:Connect(function()
+    TweenService:Create(novaBtn, TweenInfo.new(0.2), {
+        Size = UDim2.fromOffset(BTN_W + 6, BTN_H + 4)
     }):Play()
 end)
-icon.MouseLeave:Connect(function()
-    TweenService:Create(icon, TweenInfo.new(0.2), {
-        Size = UDim2.fromOffset(ICON, ICON)
+novaBtn.MouseLeave:Connect(function()
+    TweenService:Create(novaBtn, TweenInfo.new(0.2), {
+        Size = UDim2.fromOffset(BTN_W, BTN_H)
     }):Play()
-end)
-
--- pulse loop
-task.spawn(function()
-    while icon.Parent do
-        pulse.Size = UDim2.new(1, 0, 1, 0)
-        pulseStroke.Transparency = 0.4
-        TweenService:Create(pulse, TweenInfo.new(1.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = UDim2.new(1, 46, 1, 46)
-        }):Play()
-        TweenService:Create(pulseStroke, TweenInfo.new(1.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Transparency = 1
-        }):Play()
-        task.wait(1.6)
-    end
-end)
-
--- gradient rotation
-task.spawn(function()
-    while icon.Parent do
-        strokeGrad.Rotation = (strokeGrad.Rotation + 1) % 360
-        iconTextGrad.Rotation = (iconTextGrad.Rotation + 1) % 360
-        RunService.RenderStepped:Wait()
-    end
 end)
 
 -- =====================================================
@@ -286,7 +254,8 @@ menu.Visible = false
 menu.Parent = gui
 
 corner(menu, UDim.new(0, 18))
-local menuStroke = stroke(menu, T.Border, 1)
+stroke(menu, T.Border, 1)
+
 local menuGrad = Instance.new("UIGradient")
 menuGrad.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 15, 23)),
@@ -295,7 +264,7 @@ menuGrad.Color = ColorSequence.new({
 menuGrad.Rotation = 135
 menuGrad.Parent = menu
 
--- ambient neon blobs
+-- ambient blobs
 local function blob(pos, size, color, trans)
     local b = Instance.new("Frame")
     b.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -307,7 +276,6 @@ local function blob(pos, size, color, trans)
     b.ZIndex = 0
     b.Parent = menu
     corner(b, UDim.new(1, 0))
-    return b
 end
 blob(UDim2.new(0, 40, 0, 30), 220, T.Accent, 0.88)
 blob(UDim2.new(1, -30, 1, -10), 260, T.Accent2, 0.92)
@@ -324,7 +292,6 @@ sidebar.ZIndex = 2
 sidebar.Parent = menu
 corner(sidebar, UDim.new(0, 18))
 
--- square off right side
 local sideMask = Instance.new("Frame")
 sideMask.Size = UDim2.new(0, 18, 1, 0)
 sideMask.Position = UDim2.new(1, -18, 0, 0)
@@ -334,7 +301,6 @@ sideMask.BorderSizePixel = 0
 sideMask.ZIndex = 2
 sideMask.Parent = sidebar
 
--- Brand
 local brand = Instance.new("Frame")
 brand.Size = UDim2.new(1, 0, 0, 86)
 brand.BackgroundTransparency = 1
@@ -349,7 +315,7 @@ mark.BorderSizePixel = 0
 mark.ZIndex = 3
 mark.Parent = brand
 corner(mark, UDim.new(0, 12))
-local markGrad = gradient(mark, {T.Accent, T.Accent2}, 45)
+gradient(mark, {T.Accent, T.Accent2}, 45)
 
 local markLabel = Instance.new("TextLabel")
 markLabel.Size = UDim2.new(1, 0, 1, 0)
@@ -377,7 +343,7 @@ local brandSub = Instance.new("TextLabel")
 brandSub.Size = UDim2.new(1, -80, 0, 14)
 brandSub.Position = UDim2.new(0, 72, 0, 44)
 brandSub.BackgroundTransparency = 1
-brandSub.Text = "CLIENT v4"
+brandSub.Text = "CLIENT v5"
 brandSub.Font = FONT
 brandSub.TextSize = 10
 brandSub.TextColor3 = T.Dim
@@ -394,7 +360,6 @@ sideDiv.BorderSizePixel = 0
 sideDiv.ZIndex = 3
 sideDiv.Parent = sidebar
 
--- Nav
 local nav = Instance.new("Frame")
 nav.Size = UDim2.new(1, 0, 1, -102)
 nav.Position = UDim2.new(0, 0, 0, 98)
@@ -473,7 +438,7 @@ local closeBtn = makeTopBtn("✕", -48, Color3.fromRGB(220, 60, 90))
 local minBtn   = makeTopBtn("—", -88)
 
 -- =====================================================
--- CONTENT CONTAINER (pages)
+-- CONTENT
 -- =====================================================
 local contentHolder = Instance.new("Frame")
 contentHolder.Size = UDim2.new(1, -SIDEBAR_W, 1, -TOPBAR_H)
@@ -482,7 +447,6 @@ contentHolder.BackgroundTransparency = 1
 contentHolder.ZIndex = 3
 contentHolder.Parent = menu
 
--- Scrolling frame as page
 local function makePage()
     local sp = Instance.new("ScrollingFrame")
     sp.Size = UDim2.new(1, 0, 1, 0)
@@ -496,19 +460,17 @@ local function makePage()
     sp.ZIndex = 3
     sp.Parent = contentHolder
     padding(sp, 22, 22, 8, 20)
-
     local lay = Instance.new("UIListLayout")
     lay.Padding = UDim.new(0, 10)
     lay.SortOrder = Enum.SortOrder.LayoutOrder
     lay.Parent = sp
-
     return sp
 end
 
 local generalPage = makePage()
 
 -- =====================================================
--- TOGGLE ROW (neo style)
+-- TOGGLE
 -- =====================================================
 local function createToggle(parent, name, desc, order, callback)
     local card = Instance.new("Frame")
@@ -546,7 +508,6 @@ local function createToggle(parent, name, desc, order, callback)
     sub.ZIndex = 5
     sub.Parent = card
 
-    -- switch
     local sw = Instance.new("Frame")
     sw.Size = UDim2.fromOffset(48, 26)
     sw.Position = UDim2.new(1, -66, 0.5, -13)
@@ -573,7 +534,6 @@ local function createToggle(parent, name, desc, order, callback)
     btn.Parent = sw
 
     local isOn = false
-
     local function set(on)
         isOn = on
         if on then
@@ -605,7 +565,7 @@ local function createToggle(parent, name, desc, order, callback)
 end
 
 -- =====================================================
--- SLIDER ROW
+-- SLIDER
 -- =====================================================
 local function createSlider(parent, name, minV, maxV, default, order, callback)
     local card = Instance.new("Frame")
@@ -643,7 +603,6 @@ local function createSlider(parent, name, minV, maxV, default, order, callback)
     valLbl.ZIndex = 5
     valLbl.Parent = card
 
-    -- track
     local track = Instance.new("Frame")
     track.Size = UDim2.new(1, -36, 0, 8)
     track.Position = UDim2.new(0, 18, 0, 44)
@@ -660,7 +619,7 @@ local function createSlider(parent, name, minV, maxV, default, order, callback)
     fill.ZIndex = 6
     fill.Parent = track
     corner(fill, UDim.new(1, 0))
-    local fillGrad = gradient(fill, {T.Accent, T.Accent2}, 0)
+    gradient(fill, {T.Accent, T.Accent2}, 0)
 
     local knob = Instance.new("Frame")
     knob.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -671,22 +630,15 @@ local function createSlider(parent, name, minV, maxV, default, order, callback)
     knob.ZIndex = 7
     knob.Parent = track
     corner(knob, UDim.new(1, 0))
-    local knobGlow = stroke(knob, T.Accent, 2, 0.2)
+    stroke(knob, T.Accent, 2, 0.2)
 
     local dragging = false
-    local current = default
-
     local function setFromX(x)
         local rel = math.clamp((x - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
         local v = math.floor(minV + (maxV - minV) * rel + 0.5)
-        current = v
         valLbl.Text = tostring(v)
-        TweenService:Create(fill, TweenInfo.new(0.08), {
-            Size = UDim2.new(rel, 0, 1, 0)
-        }):Play()
-        TweenService:Create(knob, TweenInfo.new(0.08), {
-            Position = UDim2.new(rel, 0, 0.5, 0)
-        }):Play()
+        TweenService:Create(fill, TweenInfo.new(0.08), {Size = UDim2.new(rel, 0, 1, 0)}):Play()
+        TweenService:Create(knob, TweenInfo.new(0.08), {Position = UDim2.new(rel, 0, 0.5, 0)}):Play()
         if callback then pcall(callback, v) end
     end
 
@@ -721,50 +673,35 @@ local function createSlider(parent, name, minV, maxV, default, order, callback)
 end
 
 -- =====================================================
--- WORKING FEATURES
+-- REAL FEATURES
 -- =====================================================
-
--- FPS BOOST ────────────────────────────────────────
-local fpsSnapshot = {}
+local fpsSnap = {}
 local function setFPSBoost(on)
     if on then
-        -- Save and lower
-        fpsSnapshot = {
-            GlobalShadows      = Lighting.GlobalShadows,
-            FogEnd             = Lighting.FogEnd,
-            Brightness         = Lighting.Brightness,
-            EnvironmentDiffuse = Lighting.EnvironmentDiffuseScale,
-            EnvironmentSpec    = Lighting.EnvironmentSpecularScale,
+        fpsSnap = {
+            shadows = Lighting.GlobalShadows,
+            fog     = Lighting.FogEnd,
+            bright  = Lighting.Brightness,
+            ed      = Lighting.EnvironmentDiffuseScale,
+            es      = Lighting.EnvironmentSpecularScale,
         }
         Lighting.GlobalShadows = false
-        Lighting.FogEnd = 100000
+        Lighting.FogEnd = 1e5
         Lighting.Brightness = 2
         Lighting.EnvironmentDiffuseScale = 0
         Lighting.EnvironmentSpecularScale = 0
         pcall(function() Lighting.ShadowSoftness = 0 end)
-        pcall(function() Lighting.Technology = Enum.Technology.Compatibility end)
-
-        -- Remove post effects
         for _, e in ipairs(Lighting:GetChildren()) do
-            if e:IsA("PostEffect") then
-                e.Enabled = false
-            end
+            if e:IsA("PostEffect") then e.Enabled = false end
         end
-
-        -- Reduce workspace
         pcall(function() Workspace.GlobalWind = Vector3.new(0,0,0) end)
-        for _, d in ipairs(Workspace:GetDescendants()) do
-            if d:IsA("BasePart") and d.Material ~= Enum.Material.Plastic then
-                pcall(function() d.Material = Enum.Material.SmoothPlastic end)
-            end
-        end
         pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Level01 end)
     else
-        Lighting.GlobalShadows = fpsSnapshot.GlobalShadows ~= false
-        Lighting.FogEnd = fpsSnapshot.FogEnd or 100000
-        Lighting.Brightness = fpsSnapshot.Brightness or 2
-        Lighting.EnvironmentDiffuseScale = fpsSnapshot.EnvironmentDiffuse or 1
-        Lighting.EnvironmentSpecularScale = fpsSnapshot.EnvironmentSpec or 1
+        Lighting.GlobalShadows = fpsSnap.shadows ~= false
+        Lighting.FogEnd        = fpsSnap.fog or 1e5
+        Lighting.Brightness    = fpsSnap.bright or 2
+        Lighting.EnvironmentDiffuseScale = fpsSnap.ed or 1
+        Lighting.EnvironmentSpecularScale = fpsSnap.es or 1
         for _, e in ipairs(Lighting:GetChildren()) do
             if e:IsA("PostEffect") then e.Enabled = true end
         end
@@ -772,50 +709,33 @@ local function setFPSBoost(on)
     end
 end
 
--- ANTI LAG ──────────────────────────────────────────
 local lagHidden = {}
 local function setAntiLag(on)
     if on then
         for _, d in ipairs(Workspace:GetDescendants()) do
-            if d:IsA("ParticleEmitter") or d:IsA("Trail")
-                or d:IsA("Smoke") or d:IsA("Fire")
-                or d:IsA("Sparkles") or d:IsA("Explosion") then
+            if d:IsA("ParticleEmitter") or d:IsA("Trail") or d:IsA("Smoke")
+                or d:IsA("Fire") or d:IsA("Sparkles") then
                 if d.Enabled then
                     d.Enabled = false
                     table.insert(lagHidden, d)
                 end
-            elseif d:IsA("Decal") or d:IsA("Texture") then
-                -- skip decals, keep visuals
             end
         end
-        -- Stop newly added particles too
-        local conn
-        conn = Workspace.DescendantAdded:Connect(function(d)
+        _G.__NOVA_LagConn = Workspace.DescendantAdded:Connect(function(d)
             if State.AntiLag then
-                if d:IsA("ParticleEmitter") or d:IsA("Trail")
-                    or d:IsA("Smoke") or d:IsA("Fire")
-                    or d:IsA("Sparkles") then
-                    task.defer(function()
-                        pcall(function() d.Enabled = false end)
-                    end)
+                if d:IsA("ParticleEmitter") or d:IsA("Trail") or d:IsA("Smoke")
+                    or d:IsA("Fire") or d:IsA("Sparkles") then
+                    task.defer(function() pcall(function() d.Enabled = false end) end)
                 end
-            else
-                conn:Disconnect()
             end
         end)
-        _G.__NOVA_AntiLagConn = conn
     else
-        for _, d in ipairs(lagHidden) do
-            pcall(function() d.Enabled = true end)
-        end        lagHidden = {}
-        if _G.__NOVA_AntiLagConn then
-            _G.__NOVA_AntiLagConn:Disconnect()
-            _G.__NOVA_AntiLagConn = nil
-        end
+        for _, d in ipairs(lagHidden) do pcall(function() d.Enabled = true end) end
+        lagHidden = {}
+        if _G.__NOVA_LagConn then _G.__NOVA_LagConn:Disconnect() _G.__NOVA_LagConn = nil end
     end
 end
 
--- ANTI AFK ──────────────────────────────────────────
 local afkConn
 local function setAntiAFK(on)
     if on then
@@ -830,45 +750,39 @@ local function setAntiAFK(on)
     end
 end
 
--- FULL BRIGHT ───────────────────────────────────────
-local brightSnapshot = {}
+local brightSnap = {}
 local function setFullBright(on)
     if on then
-        brightSnapshot = {
-            Ambient = Lighting.Ambient,
-            OutdoorAmbient = Lighting.OutdoorAmbient,
-            Brightness = Lighting.Brightness,
-            ClockTime = Lighting.ClockTime,
-            FogEnd = Lighting.FogEnd,
-            GlobalShadows = Lighting.GlobalShadows,
+        brightSnap = {
+            amb = Lighting.Ambient, oamb = Lighting.OutdoorAmbient,
+            br = Lighting.Brightness, ct = Lighting.ClockTime,
+            fog = Lighting.FogEnd, sh = Lighting.GlobalShadows,
         }
-        Lighting.Ambient = Color3.fromRGB(178, 178, 178)
-        Lighting.OutdoorAmbient = Color3.fromRGB(178, 178, 178)
+        Lighting.Ambient = Color3.fromRGB(178,178,178)
+        Lighting.OutdoorAmbient = Color3.fromRGB(178,178,178)
         Lighting.Brightness = 3
         Lighting.ClockTime = 12
         Lighting.FogEnd = 1e6
         Lighting.GlobalShadows = false
-        local cc = Lighting:FindFirstChild("NOVA_ColorCorrection")
-        if not cc then
-            cc = Instance.new("ColorCorrectionEffect")
-            cc.Name = "NOVA_ColorCorrection"
+        if not Lighting:FindFirstChild("NOVA_CC") then
+            local cc = Instance.new("ColorCorrectionEffect")
+            cc.Name = "NOVA_CC"
             cc.Brightness = 0.15
             cc.Contrast = 0.05
             cc.Parent = Lighting
         end
     else
-        Lighting.Ambient = brightSnapshot.Ambient or Lighting.Ambient
-        Lighting.OutdoorAmbient = brightSnapshot.OutdoorAmbient or Lighting.OutdoorAmbient
-        Lighting.Brightness = brightSnapshot.Brightness or 2
-        Lighting.ClockTime = brightSnapshot.ClockTime or 14
-        Lighting.FogEnd = brightSnapshot.FogEnd or 100000
-        Lighting.GlobalShadows = brightSnapshot.GlobalShadows ~= false
-        local cc = Lighting:FindFirstChild("NOVA_ColorCorrection")
+        Lighting.Ambient = brightSnap.amb or Lighting.Ambient
+        Lighting.OutdoorAmbient = brightSnap.oamb or Lighting.OutdoorAmbient
+        Lighting.Brightness = brightSnap.br or 2
+        Lighting.ClockTime = brightSnap.ct or 14
+        Lighting.FogEnd = brightSnap.fog or 1e5
+        Lighting.GlobalShadows = brightSnap.sh ~= false
+        local cc = Lighting:FindFirstChild("NOVA_CC")
         if cc then cc:Destroy() end
     end
 end
 
--- INFINITE JUMP ─────────────────────────────────────
 local infJumpConn
 local function setInfiniteJump(on)
     if on then
@@ -877,9 +791,7 @@ local function setInfiniteJump(on)
                 local char = player.Character
                 if char then
                     local hum = char:FindFirstChildOfClass("Humanoid")
-                    if hum then
-                        hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                    end
+                    if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
                 end
             end)
         end
@@ -888,75 +800,58 @@ local function setInfiniteJump(on)
     end
 end
 
--- WALK SPEED ────────────────────────────────────────
 local function setWalkSpeed(v)
-    local char = player.Character
-    if char then
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then hum.WalkSpeed = v end
+    local c = player.Character
+    if c then
+        local h = c:FindFirstChildOfClass("Humanoid")
+        if h then h.WalkSpeed = v end
     end
 end
+
+local function setJumpPower(v)
+    local c = player.Character
+    if c then
+        local h = c:FindFirstChildOfClass("Humanoid")
+        if h then h.UseJumpPower = true h.JumpPower = v end
+    end
+end
+
 player.CharacterAdded:Connect(function(char)
     char:WaitForChild("Humanoid")
     task.wait(0.2)
     setWalkSpeed(State.WalkSpeed)
-end)
-
--- JUMP POWER ────────────────────────────────────────
-local function setJumpPower(v)
-    local char = player.Character
-    if char then
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.UseJumpPower = true
-            hum.JumpPower = v
-        end
-    end
-end
-player.CharacterAdded:Connect(function(char)
-    char:WaitForChild("Humanoid")
-    task.wait(0.2)
     setJumpPower(State.JumpPower)
 end)
 
 -- =====================================================
 -- BUILD GENERAL PAGE
 -- =====================================================
-local _, setFPS    = createToggle(generalPage, "FPS Boost",    "Boost rendering performance",       1, function(on)
-    State.FPSBoost = on
-    setFPSBoost(on)
+createToggle(generalPage, "FPS Boost",    "Boost rendering performance", 1, function(on)
+    State.FPSBoost = on; setFPSBoost(on)
 end)
-local _, setLag    = createToggle(generalPage, "Anti Lag",     "Disable particle & effects lag",    2, function(on)
-    State.AntiLag = on
-    setAntiLag(on)
+createToggle(generalPage, "Anti Lag",     "Disable particle & effects lag", 2, function(on)
+    State.AntiLag = on; setAntiLag(on)
 end)
-local _, setAFK    = createToggle(generalPage, "Anti AFK",     "Prevent 20-minute idle kick",       3, function(on)
-    State.AntiAFK = on
-    setAntiAFK(on)
+createToggle(generalPage, "Anti AFK",     "Prevent 20-minute idle kick", 3, function(on)
+    State.AntiAFK = on; setAntiAFK(on)
 end)
-local _, setBright = createToggle(generalPage, "Full Bright",  "See in the dark everywhere",        4, function(on)
-    State.FullBright = on
-    setFullBright(on)
+createToggle(generalPage, "Full Bright",  "See in the dark everywhere", 4, function(on)
+    State.FullBright = on; setFullBright(on)
 end)
-local _, setInfJump= createToggle(generalPage, "Infinite Jump","Jump endlessly mid-air",            5, function(on)
-    State.InfiniteJmp = on
-    setInfiniteJump(on)
+createToggle(generalPage, "Infinite Jump","Jump endlessly mid-air", 5, function(on)
+    State.InfiniteJmp = on; setInfiniteJump(on)
 end)
 
 createSlider(generalPage, "Walk Speed", 16, 200, 16, 6, function(v)
-    State.WalkSpeed = v
-    setWalkSpeed(v)
+    State.WalkSpeed = v; setWalkSpeed(v)
 end)
 createSlider(generalPage, "Jump Power", 50, 300, 50, 7, function(v)
-    State.JumpPower = v
-    setJumpPower(v)
+    State.JumpPower = v; setJumpPower(v)
 end)
 
 -- =====================================================
 -- SIDEBAR TABS
 -- =====================================================
-local tabs = {}
-
 local function createTab(name, order)
     local tab = Instance.new("TextButton")
     tab.Size = UDim2.new(1, 0, 0, 40)
@@ -1018,7 +913,7 @@ local function createTab(name, order)
 
     tab.MouseEnter:Connect(function()
         if bar.Size.Y.Offset == 0 then
-            TweenService:Create(label, TweenInfo.new(0.15), {TextColor3 = Color3.fromRGB(200, 200, 220)}):Play()
+            TweenService:Create(label, TweenInfo.new(0.15), {TextColor3 = Color3.fromRGB(200,200,220)}):Play()
         end
     end)
     tab.MouseLeave:Connect(function()
@@ -1027,11 +922,11 @@ local function createTab(name, order)
         end
     end)
 
-    return {button = tab, setActive = setActive, label = label}
+    return setActive
 end
 
-local generalTab = createTab("General", 1)
-generalTab.setActive(true)
+local setGeneralActive = createTab("General", 1)
+setGeneralActive(true)
 
 -- =====================================================
 -- OPEN / CLOSE
@@ -1040,29 +935,22 @@ local isOpen, busy = false, false
 
 local function openMenu()
     if isOpen or busy then return end
-    busy = true
-    isOpen = true
-
+    busy = true; isOpen = true
     menu.Visible = true
     menu.Size = UDim2.fromOffset(MENU_W - 80, MENU_H - 40)
-
     TweenService:Create(menu, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Size = UDim2.fromOffset(MENU_W, MENU_H)
     }):Play()
-
     task.wait(0.1)
     busy = false
 end
 
 local function closeMenu()
     if not isOpen or busy then return end
-    busy = true
-    isOpen = false
-
+    busy = true; isOpen = false
     TweenService:Create(menu, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
         Size = UDim2.fromOffset(MENU_W - 80, MENU_H - 40)
     }):Play()
-
     task.wait(0.2)
     menu.Visible = false
     busy = false
@@ -1077,9 +965,7 @@ minBtn.MouseButton1Click:Connect(closeMenu)
 
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
-    if input.KeyCode == Enum.KeyCode.RightShift then
-        _G.__NOVA_toggle()
-    end
+    if input.KeyCode == Enum.KeyCode.RightShift then _G.__NOVA_toggle() end
 end)
 
-print("[NOVA] v4 loaded — press RightShift or click the N icon.")
+print("[NOVA] v5 loaded — click the NOVA button.")
