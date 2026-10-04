@@ -1,6 +1,12 @@
 --[[
-    NOVA v7 — Clean Dark UI
+    NOVA v8 — Clean Dark UI + Integrated SPY Logger
     LocalScript → StarterPlayer > StarterPlayerScripts
+
+    Tabs:
+      General   — FPS Boost, Anti Lag, Anti AFK
+      Movement  — Infinite Jump, No Clip, Walk Speed, Jump Power
+      Visuals   — Full Bright
+      Spy       — Live event / remote / action logger with copyable code
 --]]
 
 local Players          = game:GetService("Players")
@@ -11,6 +17,7 @@ local Lighting         = game:GetService("Lighting")
 local Workspace        = game:GetService("Workspace")
 local VirtualUser      = game:GetService("VirtualUser")
 local Stats            = game:GetService("Stats")
+local HttpService      = game:GetService("HttpService")
 
 local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -19,23 +26,30 @@ local playerGui = player:WaitForChild("PlayerGui")
 -- THEME  (clean, flat, minimal borders)
 -- =====================================================
 local T = {
-    Base      = Color3.fromRGB(12, 12, 15),      -- window background
-    Surface   = Color3.fromRGB(18, 18, 22),      -- cards
-    Surface2  = Color3.fromRGB(24, 24, 29),      -- hover
-    Divider   = Color3.fromRGB(30, 30, 36),      -- very subtle lines
+    Base      = Color3.fromRGB(12, 12, 15),
+    Surface   = Color3.fromRGB(18, 18, 22),
+    Surface2  = Color3.fromRGB(24, 24, 29),
+    Surface3  = Color3.fromRGB(28, 33, 44),
+    Divider   = Color3.fromRGB(30, 30, 36),
     Text      = Color3.fromRGB(240, 240, 245),
     SubText   = Color3.fromRGB(130, 130, 140),
     Muted     = Color3.fromRGB(80, 80, 90),
-    Accent    = Color3.fromRGB(130, 100, 255),   -- one accent only
+    Accent    = Color3.fromRGB(130, 100, 255),
     AccentDim = Color3.fromRGB(90, 70, 180),
     Off       = Color3.fromRGB(40, 40, 48),
     Red       = Color3.fromRGB(230, 70, 90),
+    Green     = Color3.fromRGB(90, 220, 150),
+    Yellow    = Color3.fromRGB(240, 200, 80),
+    Pink      = Color3.fromRGB(240, 120, 200),
+    Blue      = Color3.fromRGB(120, 180, 255),
+    Purple    = Color3.fromRGB(170, 120, 255),
 }
 
 local FONT   = Enum.Font.Gotham
 local FONT_M = Enum.Font.GothamMedium
 local FONT_S = Enum.Font.GothamSemibold
 local FONT_B = Enum.Font.GothamBold
+local FONT_K = Enum.Font.GothamBlack
 
 -- =====================================================
 -- STATE
@@ -70,6 +84,47 @@ local function pad(p,l,r,t,b)
     u.PaddingTop=UDim.new(0,t or 0);  u.PaddingBottom=UDim.new(0,b or 0)
     u.Parent=p
 end
+local function ts()
+    return string.format("[%02d:%02d:%02d]",
+        tonumber(os.date("%H")), tonumber(os.date("%M")), tonumber(os.date("%S")))
+end
+local function fullPath(inst)
+    if not inst then return "nil" end
+    local ok, path = pcall(function()
+        local parts = {}
+        local cur = inst
+        while cur and cur ~= game do
+            table.insert(parts, 1, cur.Name)
+            cur = cur.Parent
+        end
+        return "game." .. table.concat(parts, ".")
+    end)
+    return ok and path or inst.Name
+end
+local function valToLua(v)
+    local t = typeof(v)
+    if t == "Vector3" then
+        return string.format("Vector3.new(%g, %g, %g)", v.X, v.Y, v.Z)
+    elseif t == "Vector2" then
+        return string.format("Vector2.new(%g, %g)", v.X, v.Y)
+    elseif t == "CFrame" then
+        return "CFrame.new(" .. tostring(v) .. ")"
+    elseif t == "Color3" then
+        return string.format("Color3.fromRGB(%d, %d, %d)",
+            math.floor(v.R*255), math.floor(v.G*255), math.floor(v.B*255))
+    elseif t == "Instance" then
+        return fullPath(v)
+    elseif t == "string" then
+        return string.format("%q", v)
+    elseif t == "number" or t == "boolean" then
+        return tostring(v)
+    elseif t == "table" then
+        local ok, enc = pcall(function() return HttpService:JSONEncode(v) end)
+        return ok and ("--[[ table ]] " .. enc) or "{table}"
+    else
+        return tostring(v)
+    end
+end
 
 -- =====================================================
 -- ROOT
@@ -83,7 +138,7 @@ gui.DisplayOrder = 9999
 gui.Parent = playerGui
 
 -- =====================================================
--- FLOATING "NOVA" TEXT BUTTON (no circle, no pill)
+-- FLOATING "NOVA" TEXT BUTTON
 -- =====================================================
 local btnW, btnH = 92, 32
 
@@ -97,7 +152,6 @@ launcher.Text = ""
 launcher.Parent = gui
 corner(launcher, UDim.new(0, 6))
 
--- animated gradient underline (only accent, no full border)
 local underline = Instance.new("Frame")
 underline.Size = UDim2.new(1, -16, 0, 2)
 underline.Position = UDim2.new(0, 8, 1, -5)
@@ -131,7 +185,6 @@ lgGrad.Color = ColorSequence.new({
 })
 lgGrad.Parent = label
 
--- animated underline sweep
 task.spawn(function()
     while launcher.Parent do
         for i = 0, 1, 0.01 do
@@ -191,7 +244,7 @@ end)
 -- =====================================================
 -- MENU
 -- =====================================================
-local MW, MH = 620, 420
+local MW, MH = 780, 470
 local HEADER_H = 56
 local TABS_H = 40
 
@@ -208,9 +261,7 @@ menu.Parent = gui
 corner(menu, UDim.new(0, 10))
 stroke(menu, T.Divider, 1, 0.4)
 
--- =====================================================
 -- HEADER
--- =====================================================
 local header = Instance.new("Frame")
 header.Size = UDim2.new(1, 0, 0, HEADER_H)
 header.BackgroundTransparency = 1
@@ -227,7 +278,6 @@ title.TextColor3 = T.Text
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = header
 
--- divider under header
 local headerDiv = Instance.new("Frame")
 headerDiv.Size = UDim2.new(1, 0, 0, 1)
 headerDiv.Position = UDim2.new(0, 0, 0, HEADER_H)
@@ -247,7 +297,6 @@ closeBtn.Font = FONT_B
 closeBtn.TextSize = 14
 closeBtn.Parent = header
 corner(closeBtn, UDim.new(0, 6))
-
 closeBtn.MouseEnter:Connect(function()
     TweenService:Create(closeBtn, TweenInfo.new(0.15), {
         BackgroundColor3 = T.Red, TextColor3 = Color3.new(1,1,1)
@@ -271,7 +320,6 @@ minBtn.Font = FONT_B
 minBtn.TextSize = 14
 minBtn.Parent = header
 corner(minBtn, UDim.new(0, 6))
-
 minBtn.MouseEnter:Connect(function()
     TweenService:Create(minBtn, TweenInfo.new(0.15), {
         BackgroundColor3 = Color3.fromRGB(40, 40, 48), TextColor3 = Color3.new(1,1,1)
@@ -283,9 +331,7 @@ minBtn.MouseLeave:Connect(function()
     }):Play()
 end)
 
--- =====================================================
--- TAB STRIP (text-only, minimal)
--- =====================================================
+-- TAB STRIP
 local tabStrip = Instance.new("Frame")
 tabStrip.Size = UDim2.new(1, 0, 0, TABS_H)
 tabStrip.Position = UDim2.new(0, 0, 0, HEADER_H + 1)
@@ -303,7 +349,6 @@ tabLayout.FillDirection = Enum.FillDirection.Horizontal
 tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
 tabLayout.Parent = tabRow
 
--- sliding underline indicator
 local indicator = Instance.new("Frame")
 indicator.Size = UDim2.new(0, 60, 0, 2)
 indicator.Position = UDim2.new(0, 16, 1, -3)
@@ -312,7 +357,6 @@ indicator.BorderSizePixel = 0
 indicator.Parent = tabStrip
 corner(indicator, UDim.new(1, 0))
 
--- divider
 local tabDiv = Instance.new("Frame")
 tabDiv.Size = UDim2.new(1, 0, 0, 1)
 tabDiv.Position = UDim2.new(0, 0, 0, HEADER_H + TABS_H + 1)
@@ -320,9 +364,7 @@ tabDiv.BackgroundColor3 = T.Divider
 tabDiv.BorderSizePixel = 0
 tabDiv.Parent = menu
 
--- =====================================================
 -- PAGE HOLDER
--- =====================================================
 local pageHolder = Instance.new("Frame")
 pageHolder.Size = UDim2.new(1, 0, 1, -(HEADER_H + TABS_H + 2))
 pageHolder.Position = UDim2.new(0, 0, 0, HEADER_H + TABS_H + 2)
@@ -337,7 +379,7 @@ local function showPage(name)
     for n, p in pairs(pages) do p.Visible = (n == name) end
 end
 
-local function createPage(name)
+local function createPage(name, addPadding)
     local p = Instance.new("ScrollingFrame")
     p.Size = UDim2.new(1, 0, 1, 0)
     p.BackgroundTransparency = 1
@@ -349,10 +391,12 @@ local function createPage(name)
     p.AutomaticCanvasSize = Enum.AutomaticSize.Y
     p.Visible = false
     p.Parent = pageHolder
-    local lay = Instance.new("UIListLayout")
-    lay.Padding = UDim.new(0, 8)
-    lay.SortOrder = Enum.SortOrder.LayoutOrder
-    lay.Parent = p
+    if addPadding ~= false then
+        local lay = Instance.new("UIListLayout")
+        lay.Padding = UDim.new(0, 8)
+        lay.SortOrder = Enum.SortOrder.LayoutOrder
+        lay.Parent = p
+    end
     pages[name] = p
     return p
 end
@@ -400,13 +444,13 @@ local function registerTab(name, order)
         showPage(name)
     end)
 
-    local entry = {button = tab, setActive = setActive}
+    local entry = {button = tab, setActive = setActive, name = name}
     tabs[#tabs+1] = entry
     return entry
 end
 
 -- =====================================================
--- ROW: TOGGLE  (flat, no switch circle knob)
+-- ROW: TOGGLE
 -- =====================================================
 local function createToggle(parent, name, desc, order, callback)
     local row = Instance.new("Frame")
@@ -439,7 +483,6 @@ local function createToggle(parent, name, desc, order, callback)
     sub.TextXAlignment = Enum.TextXAlignment.Left
     sub.Parent = row
 
-    -- Minimal toggle: rectangular track + rectangular knob (no full circles)
     local track = Instance.new("Frame")
     track.Size = UDim2.fromOffset(40, 20)
     track.Position = UDim2.new(1, -54, 0.5, -10)
@@ -481,14 +524,6 @@ local function createToggle(parent, name, desc, order, callback)
 
     btn.MouseButton1Click:Connect(function() set(not isOn) end)
 
-    -- whole row is clickable too
-    row.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1
-            or i.UserInputType == Enum.UserInputType.Touch then
-            -- skip if clicked the switch (btn handles that)
-        end
-    end)
-
     row.MouseEnter:Connect(function()
         TweenService:Create(row, TweenInfo.new(0.15), {BackgroundColor3 = T.Surface2}):Play()
     end)
@@ -500,7 +535,7 @@ local function createToggle(parent, name, desc, order, callback)
 end
 
 -- =====================================================
--- ROW: SLIDER  (flat, thin track)
+-- ROW: SLIDER
 -- =====================================================
 local function createSlider(parent, name, minV, maxV, default, order, callback)
     local row = Instance.new("Frame")
@@ -749,7 +784,7 @@ player.CharacterAdded:Connect(function(c)
 end)
 
 -- =====================================================
--- BUILD PAGES
+-- PAGES: General / Movement / Visuals
 -- =====================================================
 local generalPage  = createPage("General")
 local movementPage = createPage("Movement")
@@ -769,7 +804,604 @@ createSlider(movementPage, "Jump Power", 50, 300, 50, 4, function(v) State.JumpP
 registerTab("Visuals", 3)
 createToggle(visualPage, "Full Bright", "See in the dark everywhere", 1, function(on) State.FullBright = on setFullBright(on) end)
 
+-- =====================================================
+-- SPY PAGE  (integrated)
+-- =====================================================
+local spyPage = createPage("Spy", false)
+
+-- container: top controls + body (list + detail)
+local spyTop = Instance.new("Frame")
+spyTop.Size = UDim2.new(1, 0, 0, 28)
+spyTop.BackgroundTransparency = 1
+spyTop.LayoutOrder = 0
+spyTop.Parent = spyPage
+
+-- Pause
+local pauseBtn = Instance.new("TextButton")
+pauseBtn.Size = UDim2.fromOffset(66, 26)
+pauseBtn.Position = UDim2.new(0, 0, 0, 0)
+pauseBtn.BackgroundColor3 = T.Surface
+pauseBtn.AutoButtonColor = false
+pauseBtn.Text = "Pause"
+pauseBtn.TextColor3 = T.SubText
+pauseBtn.Font = FONT_M
+pauseBtn.TextSize = 11
+pauseBtn.Parent = spyTop
+corner(pauseBtn, UDim.new(0, 6))
+pauseBtn.MouseEnter:Connect(function()
+    TweenService:Create(pauseBtn, TweenInfo.new(0.15), {BackgroundColor3 = T.Surface2, TextColor3 = T.Text}):Play()
+end)
+pauseBtn.MouseLeave:Connect(function()
+    TweenService:Create(pauseBtn, TweenInfo.new(0.15), {BackgroundColor3 = T.Surface, TextColor3 = T.SubText}):Play()
+end)
+
+-- Clear
+local clearBtn = Instance.new("TextButton")
+clearBtn.Size = UDim2.fromOffset(66, 26)
+clearBtn.Position = UDim2.new(0, 74, 0, 0)
+clearBtn.BackgroundColor3 = T.Surface
+clearBtn.AutoButtonColor = false
+clearBtn.Text = "Clear"
+clearBtn.TextColor3 = T.SubText
+clearBtn.Font = FONT_M
+clearBtn.TextSize = 11
+clearBtn.Parent = spyTop
+corner(clearBtn, UDim.new(0, 6))
+clearBtn.MouseEnter:Connect(function()
+    TweenService:Create(clearBtn, TweenInfo.new(0.15), {BackgroundColor3 = T.Surface2, TextColor3 = T.Text}):Play()
+end)
+clearBtn.MouseLeave:Connect(function()
+    TweenService:Create(clearBtn, TweenInfo.new(0.15), {BackgroundColor3 = T.Surface, TextColor3 = T.SubText}):Play()
+end)
+
+-- filter chips (scrollable row)
+local chipRow = Instance.new("Frame")
+chipRow.Size = UDim2.new(1, -160, 0, 26)
+chipRow.Position = UDim2.new(0, 148, 0, 0)
+chipRow.BackgroundTransparency = 1
+chipRow.ClipsDescendants = true
+chipRow.Parent = spyTop
+
+local chipLayout = Instance.new("UIListLayout")
+chipLayout.FillDirection = Enum.FillDirection.Horizontal
+chipLayout.Padding = UDim.new(0, 6)
+chipLayout.SortOrder = Enum.SortOrder.LayoutOrder
+chipLayout.Parent = chipRow
+
+local spyFilters = {"All", "Remotes", "Items", "GUI", "Actions", "Instance"}
+local activeFilter = "All"
+
+local CATEGORY_COLORS = {
+    Remote   = T.Blue,
+    Item     = T.Green,
+    GUI      = T.Yellow,
+    Action   = T.Pink,
+    Property = T.Purple,
+    Instance = T.SubText,
+    Player   = T.Green,
+    Error    = T.Red,
+}
+
+-- SPY data
+local spyLogs = {}
+local spyPaused = false
+local spyNextId = 1
+local rowCache = {}
+local currentCode = ""
+
+-- body: list + detail
+local spyBody = Instance.new("Frame")
+spyBody.Size = UDim2.new(1, 0, 1, -38)
+spyBody.Position = UDim2.new(0, 0, 0, 38)
+spyBody.BackgroundTransparency = 1
+spyBody.LayoutOrder = 1
+spyBody.Parent = spyPage
+
+local listPanel = Instance.new("Frame")
+listPanel.Size = UDim2.new(0.55, -5, 1, 0)
+listPanel.BackgroundColor3 = T.Surface
+listPanel.BorderSizePixel = 0
+listPanel.Parent = spyBody
+corner(listPanel, UDim.new(0, 6))
+
+local listScroll = Instance.new("ScrollingFrame")
+listScroll.Size = UDim2.new(1, -8, 1, -8)
+listScroll.Position = UDim2.new(0, 4, 0, 4)
+listScroll.BackgroundTransparency = 1
+listScroll.BorderSizePixel = 0
+listScroll.ScrollBarThickness = 2
+listScroll.ScrollBarImageColor3 = T.Muted
+listScroll.CanvasSize = UDim2.new(0,0,0,0)
+listScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+listScroll.Parent = listPanel
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.Padding = UDim.new(0, 2)
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Parent = listScroll
+
+local detailPanel = Instance.new("Frame")
+detailPanel.Size = UDim2.new(0.45, -5, 1, 0)
+detailPanel.Position = UDim2.new(0.55, 5, 0, 0)
+detailPanel.BackgroundColor3 = T.Surface
+detailPanel.BorderSizePixel = 0
+detailPanel.Parent = spyBody
+corner(detailPanel, UDim.new(0, 6))
+pad(detailPanel, 12, 12, 10, 10)
+
+local dTitle = Instance.new("TextLabel")
+dTitle.Size = UDim2.new(1, 0, 0, 18)
+dTitle.BackgroundTransparency = 1
+dTitle.Text = "Select an event"
+dTitle.Font = FONT_B
+dTitle.TextSize = 13
+dTitle.TextColor3 = T.Text
+dTitle.TextXAlignment = Enum.TextXAlignment.Left
+dTitle.Parent = detailPanel
+
+local dSub = Instance.new("TextLabel")
+dSub.Size = UDim2.new(1, 0, 0, 14)
+dSub.Position = UDim2.new(0, 0, 0, 20)
+dSub.BackgroundTransparency = 1
+dSub.Text = "Click a row to see its code"
+dSub.Font = FONT
+dSub.TextSize = 10
+dSub.TextColor3 = T.SubText
+dSub.TextXAlignment = Enum.TextXAlignment.Left
+dSub.Parent = detailPanel
+
+local dDivider = Instance.new("Frame")
+dDivider.Size = UDim2.new(1, 0, 0, 1)
+dDivider.Position = UDim2.new(0, 0, 0, 40)
+dDivider.BackgroundColor3 = T.Divider
+dDivider.BorderSizePixel = 0
+dDivider.Parent = detailPanel
+
+local dCodeBox = Instance.new("Frame")
+dCodeBox.Size = UDim2.new(1, 0, 1, -88)
+dCodeBox.Position = UDim2.new(0, 0, 0, 50)
+dCodeBox.BackgroundColor3 = T.Base
+dCodeBox.BorderSizePixel = 0
+dCodeBox.Parent = detailPanel
+corner(dCodeBox, UDim.new(0, 5))
+stroke(dCodeBox, T.Divider, 1, 0.5)
+
+local dCodeScroll = Instance.new("ScrollingFrame")
+dCodeScroll.Size = UDim2.new(1, -12, 1, -12)
+dCodeScroll.Position = UDim2.new(0, 6, 0, 6)
+dCodeScroll.BackgroundTransparency = 1
+dCodeScroll.BorderSizePixel = 0
+dCodeScroll.ScrollBarThickness = 2
+dCodeScroll.ScrollBarImageColor3 = T.Muted
+dCodeScroll.CanvasSize = UDim2.new(0,0,0,0)
+dCodeScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+dCodeScroll.Parent = dCodeBox
+
+local dCode = Instance.new("TextLabel")
+dCode.Size = UDim2.new(1, 0, 0, 0)
+dCode.BackgroundTransparency = 1
+dCode.Text = ""
+dCode.Font = Enum.Font.Code
+dCode.TextSize = 12
+dCode.TextColor3 = Color3.fromRGB(200, 220, 240)
+dCode.TextWrapped = true
+dCode.TextXAlignment = Enum.TextXAlignment.Left
+dCode.TextYAlignment = Enum.TextYAlignment.Top
+dCode.AutomaticSize = Enum.AutomaticSize.Y
+dCode.Parent = dCodeScroll
+
+local copyBtn = Instance.new("TextButton")
+copyBtn.Size = UDim2.new(1, 0, 0, 30)
+copyBtn.Position = UDim2.new(0, 0, 1, -34)
+copyBtn.BackgroundColor3 = T.Accent
+copyBtn.AutoButtonColor = false
+copyBtn.Text = "Copy Code"
+copyBtn.TextColor3 = Color3.fromRGB(15,15,20)
+copyBtn.Font = FONT_B
+copyBtn.TextSize = 12
+copyBtn.Parent = detailPanel
+corner(copyBtn, UDim.new(0, 6))
+copyBtn.MouseEnter:Connect(function()
+    TweenService:Create(copyBtn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(150, 200, 255)}):Play()
+end)
+copyBtn.MouseLeave:Connect(function()
+    TweenService:Create(copyBtn, TweenInfo.new(0.15), {BackgroundColor3 = T.Accent}):Play()
+end)
+copyBtn.MouseButton1Click:Connect(function()
+    if currentCode ~= "" and setclipboard then
+        setclipboard(currentCode)
+        copyBtn.Text = "Copied!"
+        task.wait(1)
+        copyBtn.Text = "Copy Code"
+    end
+end)
+
+-- filter chips
+local function matchesFilter(entry)
+    if activeFilter == "All" then return true end
+    if activeFilter == "Remotes"  then return entry.category == "Remote" end
+    if activeFilter == "Items"    then return entry.category == "Item" end
+    if activeFilter == "GUI"      then return entry.category == "GUI" end
+    if activeFilter == "Actions"  then return entry.category == "Action" end
+    if activeFilter == "Instance" then return entry.category == "Instance" end
+    return true
+end
+
+local function selectEntry(entry)
+    dTitle.Text = entry.title
+    dSub.Text = entry.time .. "  ·  " .. entry.category
+    dCode.Text = entry.code or "-- no code captured"
+    currentCode = entry.code or ""
+end
+
+local function makeRow(entry)
+    local row = Instance.new("TextButton")
+    row.Size = UDim2.new(1, 0, 0, 26)
+    row.BackgroundColor3 = T.Surface
+    row.BackgroundTransparency = 1
+    row.AutoButtonColor = false
+    row.Text = ""
+    row.LayoutOrder = entry.id
+    row.Parent = listScroll
+    corner(row, UDim.new(0, 4))
+
+    local chip = Instance.new("Frame")
+    chip.Size = UDim2.fromOffset(3, 14)
+    chip.Position = UDim2.new(0, 8, 0.5, -7)
+    chip.BackgroundColor3 = CATEGORY_COLORS[entry.category] or T.SubText
+    chip.BorderSizePixel = 0
+    chip.Parent = row
+    corner(chip, UDim.new(1,0))
+
+    local tl = Instance.new("TextLabel")
+    tl.Size = UDim2.new(0, 58, 1, 0)
+    tl.Position = UDim2.new(0, 16, 0, 0)
+    tl.BackgroundTransparency = 1
+    tl.Text = entry.time
+    tl.Font = Enum.Font.Code
+    tl.TextSize = 10
+    tl.TextColor3 = T.Muted
+    tl.TextXAlignment = Enum.TextXAlignment.Left
+    tl.Parent = row
+
+    local cl = Instance.new("TextLabel")
+    cl.Size = UDim2.new(0, 62, 1, 0)
+    cl.Position = UDim2.new(0, 76, 0, 0)
+    cl.BackgroundTransparency = 1
+    cl.Text = entry.category
+    cl.Font = FONT_B
+    cl.TextSize = 10
+    cl.TextColor3 = CATEGORY_COLORS[entry.category] or T.SubText
+    cl.TextXAlignment = Enum.TextXAlignment.Left
+    cl.Parent = row
+
+    local text = entry.title
+    if #text > 60 then text = text:sub(1, 57) .. "..." end
+
+    local nl = Instance.new("TextLabel")
+    nl.Size = UDim2.new(1, -152, 1, 0)
+    nl.Position = UDim2.new(0, 142, 0, 0)
+    nl.BackgroundTransparency = 1
+    nl.Text = text
+    nl.Font = FONT
+    nl.TextSize = 11
+    nl.TextColor3 = T.Text
+    nl.TextXAlignment = Enum.TextXAlignment.Left
+    nl.TextTruncate = Enum.TextTruncate.AtEnd
+    nl.Parent = row
+
+    row.MouseEnter:Connect(function()
+        TweenService:Create(row, TweenInfo.new(0.1), {BackgroundTransparency = 0, BackgroundColor3 = T.Surface2}):Play()
+    end)
+    row.MouseLeave:Connect(function()
+        TweenService:Create(row, TweenInfo.new(0.1), {BackgroundTransparency = 1}):Play()
+    end)
+    row.MouseButton1Click:Connect(function()
+        selectEntry(entry)
+        for _, r in ipairs(rowCache) do
+            if r.entry.id ~= entry.id then
+                TweenService:Create(r.button, TweenInfo.new(0.15), {BackgroundTransparency = 1}):Play()
+            end
+        end
+        TweenService:Create(row, TweenInfo.new(0.15), {
+            BackgroundTransparency = 0,
+            BackgroundColor3 = T.Surface3
+        }):Play()
+    end)
+
+    rowCache[#rowCache+1] = {button = row, entry = entry}
+    return row
+end
+
+local function refreshSpyList()
+    for _, r in ipairs(rowCache) do r.button:Destroy() end
+    rowCache = {}
+    for _, entry in ipairs(spyLogs) do
+        if matchesFilter(entry) then makeRow(entry) end
+    end
+    if #spyLogs > 0 then
+        local last = spyLogs[#spyLogs]
+        if matchesFilter(last) then selectEntry(last) end
+    end
+end
+
+local function addLog(category, title, code)
+    if spyPaused then return end
+    local entry = {
+        id = spyNextId,
+        time = ts(),
+        category = category,
+        title = title,
+        code = code or ("-- " .. title),
+    }
+    spyNextId += 1
+    spyLogs[#spyLogs+1] = entry
+    if #spyLogs > 400 then table.remove(spyLogs, 1) end
+    if matchesFilter(entry) then
+        makeRow(entry)
+        task.defer(function()
+            listScroll.CanvasPosition = Vector2.new(0, math.max(0, listScroll.AbsoluteCanvasSize.Y))
+        end)
+        selectEntry(entry)
+    end
+end
+
+-- build filter chips
+for i, f in ipairs(spyFilters) do
+    local chip = Instance.new("TextButton")
+    chip.Size = UDim2.new(0, 60, 1, 0)
+    chip.BackgroundColor3 = T.Surface
+    chip.BackgroundTransparency = 0.4
+    chip.AutoButtonColor = false
+    chip.Text = f
+    chip.Font = FONT_M
+    chip.TextSize = 10
+    chip.TextColor3 = T.SubText
+    chip.LayoutOrder = i
+    chip.Parent = chipRow
+    corner(chip, UDim.new(0, 6))
+
+    chip.MouseButton1Click:Connect(function()
+        activeFilter = f
+        for _, c in ipairs(chipRow:GetChildren()) do
+            if c:IsA("TextButton") then
+                TweenService:Create(c, TweenInfo.new(0.15), {
+                    BackgroundColor3 = T.Surface,
+                    BackgroundTransparency = 0.4,
+                    TextColor3 = T.SubText,
+                }):Play()
+            end
+        end
+        TweenService:Create(chip, TweenInfo.new(0.15), {
+            BackgroundColor3 = T.Accent,
+            BackgroundTransparency = 0,
+            TextColor3 = Color3.fromRGB(15,15,20),
+        }):Play()
+        refreshSpyList()
+    end)
+
+    chip.MouseEnter:Connect(function()
+        TweenService:Create(chip, TweenInfo.new(0.1), {BackgroundColor3 = T.Surface2}):Play()
+    end)
+    chip.MouseLeave:Connect(function()
+        if activeFilter ~= f then
+            TweenService:Create(chip, TweenInfo.new(0.1), {BackgroundColor3 = T.Surface}):Play()
+        end
+    end)
+
+    if i == 1 then
+        chip.BackgroundColor3 = T.Accent
+        chip.BackgroundTransparency = 0
+        chip.TextColor3 = Color3.fromRGB(15,15,20)
+    end
+end
+
+-- register Spy tab (LAST so it appears 4th)
+registerTab("Spy", 4)
+
+-- =====================================================
+-- SPY HOOKS
+-- =====================================================
+
+-- 1. Remote events
+local function hookRemotes(parent)
+    for _, inst in ipairs(parent:GetDescendants()) do
+        if inst:IsA("RemoteEvent") then
+            if not inst:GetAttribute("__NOVA_spy_hooked") then
+                inst:SetAttribute("__NOVA_spy_hooked", true)
+                inst.OnClientEvent:Connect(function(...)
+                    local args = {...}
+                    local names = {}
+                    for i = 1, #args do table.insert(names, "arg" .. i) end
+                    local code = string.format(
+                        "-- Received from server\n%s:OnClientEvent:Connect(function(%s)\n    -- ...\nend)",
+                        fullPath(inst),
+                        table.concat(names, ", ")
+                    )
+                    addLog("Remote", "◀ " .. fullPath(inst) .. " (" .. #args .. " args)", code)
+                end)
+            end
+        end
+    end
+end
+
+hookRemotes(game)
+game.DescendantAdded:Connect(function(inst)
+    if inst:IsA("RemoteEvent") or inst:IsA("RemoteFunction") then
+        task.defer(function() hookRemotes(inst.Parent or game) end)
+    end
+end)
+
+-- 2. Backpack / item pickups
+local function watchBackpack(bp)
+    bp.ChildAdded:Connect(function(child)
+        if child:IsA("Tool") then
+            local code = string.format(
+                "-- Tool added to Backpack\n" ..
+                "local tool = %s\n" ..
+                "tool.Equipped:Connect(function()\n" ..
+                "    -- tool equipped\n" ..
+                "end)",
+                fullPath(child)
+            )
+            addLog("Item", "Picked up: " .. child.Name, code)
+        end
+    end)
+    bp.ChildRemoved:Connect(function(child)
+        if child:IsA("Tool") then
+            addLog("Item", "Removed: " .. child.Name,
+                "-- Tool removed\n" .. fullPath(child) .. ":Destroy()")
+        end
+    end)
+    for _, c in ipairs(bp:GetChildren()) do
+        if c:IsA("Tool") then
+            addLog("Item", "Existing tool: " .. c.Name,
+                "-- Tool: " .. fullPath(c))
+        end
+    end
+end
+
+local function onCharacter(char)
+    local bp = player:WaitForChild("Backpack", 5)
+    if bp then watchBackpack(bp) end
+    char.ChildAdded:Connect(function(c)
+        if c:IsA("Tool") then
+            addLog("Item", "Equipped: " .. c.Name,
+                "-- Equipped: " .. fullPath(c))
+        end
+    end)
+end
+player.CharacterAdded:Connect(onCharacter)
+if player.Character then onCharacter(player.Character) end
+
+-- 3. GUI open / close
+local function watchGui(g)
+    if not g:IsA("ScreenGui") then return end
+    g:GetPropertyChangedSignal("Enabled"):Connect(function()
+        addLog("GUI", (g.Enabled and "Opened: " or "Closed: ") .. g.Name,
+            string.format("-- ScreenGui '%s'\n-- Enabled = %s\nlocal gui = %s\ngui.Enabled = %s",
+                g.Name, tostring(g.Enabled), fullPath(g), tostring(g.Enabled)))
+    end)
+end
+
+for _, g in ipairs(playerGui:GetChildren()) do
+    if g:IsA("ScreenGui") and g.Name ~= "NOVA" then watchGui(g) end
+end
+playerGui.ChildAdded:Connect(function(c)
+    if c:IsA("ScreenGui") and c.Name ~= "NOVA" then
+        addLog("GUI", "ScreenGui created: " .. c.Name,
+            "-- Created ScreenGui\nlocal gui = " .. fullPath(c))
+        watchGui(c)
+        c.DescendantAdded:Connect(function(d)
+            if d:IsA("TextButton") or d:IsA("ImageButton") then
+                addLog("GUI", "Button: " .. d.Name .. " in " .. c.Name,
+                    string.format("-- Button found\nlocal btn = %s\nbtn.MouseButton1Click:Connect(function()\n    -- clicked\nend)",
+                        fullPath(d)))
+            end
+        end)
+    end
+end)
+
+-- 4. Keys
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        addLog("Action", "Key: " .. input.KeyCode.Name,
+            string.format("-- Key pressed\nUserInputService.InputBegan:Connect(function(input, gp)\n    if gp then return end\n    if input.KeyCode == Enum.KeyCode.%s then\n        -- do thing\n    end\nend)",
+                input.KeyCode.Name))
+    end
+end)
+
+-- 5. Chat
+player.Chatted:Connect(function(msg)
+    addLog("Action", "Chat: " .. msg:sub(1, 40),
+        string.format("-- Player chatted: %q\n-- (Sent to server via SayMessageRequest)", msg))
+end)
+
+-- 6. Position deltas
+local lastPos, lastPosTime = nil, 0
+RunService.Heartbeat:Connect(function()
+    local c = player.Character
+    if not c then return end
+    local hrp = c:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    local now = tick()
+    if now - lastPosTime < 0.5 then return end
+    lastPosTime = now
+    if lastPos then
+        local delta = (hrp.Position - lastPos).Magnitude
+        if delta > 40 then
+            addLog("Action", string.format("Big move: %.0f studs", delta),
+                string.format("-- Big position delta: %g studs\n-- Previous: %s\n-- Current: %s",
+                    delta, tostring(lastPos), tostring(hrp.Position)))
+        end
+    end
+    lastPos = hrp.Position
+end)
+
+-- 7. Humanoid state
+local lastState
+local function watchHumanoid(h)
+    h.StateChanged:Connect(function(_, new)
+        if new ~= lastState then
+            lastState = new
+            addLog("Action", "State: " .. new.Name,
+                string.format("-- Humanoid state: %s\nhumanoid.StateChanged:Connect(function(_, new)\n    if new == Enum.HumanoidStateType.%s then\n        -- do thing\n    end\nend)",
+                    new.Name, new.Name))
+        end
+    end)
+end
+local function onCharHum(c)
+    local h = c:WaitForChild("Humanoid", 5)
+    if h then watchHumanoid(h) end
+end
+player.CharacterAdded:Connect(onCharHum)
+if player.Character then onCharHum(player.Character) end
+
+-- 8. Workspace instance add/remove (throttled)
+local instThrottle = 0
+Workspace.DescendantAdded:Connect(function(d)
+    local now = tick()
+    if now - instThrottle < 0.05 then return end
+    instThrottle = now
+    addLog("Instance", "+ " .. d.Name .. " (" .. d.ClassName .. ")",
+        string.format("-- Added: %s\n-- ClassName: %s\nlocal obj = %s",
+            d.Name, d.ClassName, fullPath(d)))
+end)
+
+Workspace.DescendantRemoving:Connect(function(d)
+    local now = tick()
+    if now - instThrottle < 0.05 then return end
+    instThrottle = now
+    addLog("Instance", "- " .. d.Name .. " (" .. d.ClassName .. ")",
+        string.format("-- Removed: %s\n-- ClassName: %s", d.Name, d.ClassName))
+end)
+
+-- initial log
+addLog("Action", "SPY initialized",
+    string.format("-- NOVA Spy running\n-- Player: %s\n-- PlaceId: %d\n-- JobId: %s",
+        player.Name, game.PlaceId, game.JobId))
+
+-- Pause / Clear wiring
+pauseBtn.MouseButton1Click:Connect(function()
+    spyPaused = not spyPaused
+    pauseBtn.Text = spyPaused and "Resume" or "Pause"
+    pauseBtn.TextColor3 = spyPaused and T.Yellow or T.SubText
+end)
+clearBtn.MouseButton1Click:Connect(function()
+    spyLogs = {}
+    for _, r in ipairs(rowCache) do r.button:Destroy() end
+    rowCache = {}
+    spyNextId = 1
+    dTitle.Text = "Select an event"
+    dSub.Text = "Click a row to see its code"
+    dCode.Text = ""
+    currentCode = ""
+end)
+
+-- =====================================================
 -- activate first tab
+-- =====================================================
 task.defer(function()
     task.wait(0.1)
     local first = tabs[1]
@@ -820,4 +1452,4 @@ UserInputService.InputBegan:Connect(function(i, gp)
     if i.KeyCode == Enum.KeyCode.RightShift then _G.__NOVA_toggle() end
 end)
 
-print("[NOVA] v7 loaded.")
+print("[NOVA] v8 loaded with Spy tab.")
